@@ -1,20 +1,18 @@
 <div align="center">
 
-# Phantom
+<img src="build/icon.png" alt="PruvoAI logo" width="128" />
+
+# PruvoAI
 
 **Your invisible personal assistant for Windows.**
 A local AI overlay that gives you real-time answers during meetings, interviews, and coding sessions without switching windows or paying a subscription.
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?logo=windows)](https://github.com)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?logo=windows)](https://github.com/techbro20/PruvoAI)
 [![Built with Electron](https://img.shields.io/badge/Electron-39-47848f?logo=electron)](https://electronjs.org)
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
 [![No Telemetry](https://img.shields.io/badge/Telemetry-None-brightgreen)](README.md)
 [![Free Forever](https://img.shields.io/badge/Price-Free%20Forever-success)](README.md)
-
----
-
-<img src="PhantomBanner.png" alt="Phantom - Your invisible personal assistant" width="100%" />
 
 ---
 
@@ -24,9 +22,9 @@ A local AI overlay that gives you real-time answers during meetings, interviews,
 
 ---
 
-## What is Phantom?
+## What is PruvoAI?
 
-Phantom is a **transparent AI assistant overlay** that floats above every window on your screen. It is built for personal, local-first AI help during live situations while keeping provider keys and conversation data under your control.
+PruvoAI is a **transparent AI assistant overlay** that floats above every window on your screen. It is built for personal, local-first AI help during live situations while keeping provider keys and conversation data under your control.
 
 **Use it for:**
 - **Job interviews** — get instant answers to technical questions while screen-sharing
@@ -52,7 +50,7 @@ Phantom is a **transparent AI assistant overlay** that floats above every window
 | **Transparent Overlay** | Frameless, always-on-top window. Toggle with `Ctrl+\` |
 | **10 Built-in AI Providers** | OpenAI, Claude, Gemini, Grok, Mistral, Cohere, Groq, Perplexity, OpenRouter, Ollama |
 | **Custom Providers** | Add any OpenAI-compatible endpoint via a curl template |
-| **Speech-to-Text** | 9 built-in STT providers + custom curl templates |
+| **Speech-to-Text** | 7 built-in STT providers + custom curl templates |
 | **Screenshot Capture** | Full-screen or drag-select a region, auto-attached to your next message |
 | **System Audio Loopback** | Transcribe audio playing on your PC (Windows) |
 | **File Attachments** | Attach up to 6 files per message |
@@ -78,8 +76,8 @@ Phantom is a **transparent AI assistant overlay** that floats above every window
 
 ```powershell
 # Clone the repo
-git clone https://github.com/debajyoti2050/phantom.git
-cd phantom
+git clone https://github.com/techbro20/PruvoAI.git
+cd PruvoAI
 
 # Install dependencies
 npm install
@@ -106,7 +104,7 @@ npm run dist:win
 npm run dist:mac
 ```
 
-macOS builds are unsigned by default because Phantom is personal local software. GitHub Actions does not require Apple signing secrets for normal personal releases.
+macOS builds are unsigned by default because PruvoAI is personal local software. GitHub Actions does not require Apple signing secrets for normal personal releases.
 
 If you later want a Gatekeeper-safe macOS release that opens normally after browser download on any Mac, add these optional GitHub repository secrets:
 
@@ -121,7 +119,7 @@ APPLE_API_ISSUER
 `CSC_LINK` is your exported Developer ID Application certificate as a base64-encoded `.p12`. The Apple API key values come from App Store Connect. Without these optional secrets, the macOS artifact stays unsigned. If macOS blocks a browser-downloaded unsigned app, remove quarantine once:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/Phantom.app
+xattr -dr com.apple.quarantine /Applications/PruvoAI.app
 ```
 
 Output lands in `release/`. Windows builds produce an NSIS installer and a portable `.exe`; macOS builds produce `.dmg` and `.zip` artifacts.
@@ -130,7 +128,7 @@ Output lands in `release/`. Windows builds produce an NSIS installer and a porta
 
 ## Setting Up Your First AI Provider
 
-When Phantom opens for the first time, open the **Dashboard** (`Ctrl+Shift+D`) and go to **Providers**.
+When PruvoAI opens for the first time, open the **Dashboard** (`Ctrl+Shift+D`) and go to **Providers**.
 
 ### Option A — Built-in Providers (Recommended)
 
@@ -160,11 +158,11 @@ Choose from 10 pre-configured providers. All you need is an API key.
 
 ### Option B — Custom Provider (Advanced)
 
-Phantom uses **curl templates** to support any HTTP-based AI API. This means if a service has a REST API, you can connect it.
+PruvoAI uses **curl templates** to support any HTTP-based AI API. This means if a service has a REST API, you can connect it.
 
 #### How Custom Providers Work
 
-A custom provider is a curl command with placeholder variables that Phantom fills in at request time:
+A custom provider is a curl command with placeholder variables that PruvoAI fills in at request time:
 
 | Variable | Replaced with |
 |----------|--------------|
@@ -229,44 +227,53 @@ curl https://my-api.example.com/v1/chat/completions \
 
 ## Speech-to-Text Setup
 
-Phantom supports both **microphone input** and **Windows system audio loopback** (transcribing audio playing on your PC).
+PruvoAI supports both **microphone input** and **Windows system audio loopback** (transcribing audio playing on your PC).
 
 ### Built-in STT Providers
 
-| Provider | Notes |
-|----------|-------|
-| OpenAI Whisper | Fast, accurate, multilingual |
-| Groq Whisper | Fastest option |
-| ElevenLabs | High quality |
-| Google Speech | Broad language support |
-| Deepgram | Low latency |
-| Azure Speech | Enterprise-grade |
-| Speechmatics | Accuracy-focused |
-| Rev.ai | Async + real-time |
-| IBM Watson | On-prem option |
+Each provider needs your own API key. After you enter the key, PruvoAI lists the speech models that key can use (where the provider supports it).
+
+| Provider | Model to use | Notes |
+|----------|--------------|-------|
+| Groq Whisper | `whisper-large-v3-turbo` | Fastest; has a free tier |
+| OpenAI Whisper | `whisper-1` or `gpt-4o-transcribe` | Accurate, multilingual |
+| ElevenLabs | `scribe_v1` | High quality |
+| Deepgram | `nova-3` | Low latency |
+| Azure Speech | — (set region) | Clips up to 60 seconds |
+| Google Speech | — | Needs an OAuth access token and project ID, not an API key |
+| IBM Watson | — | The key field must be base64 of `apikey:<your key>` |
+
+### Setting up STT
+
+1. Dashboard (`Ctrl+Shift+D`) → **Providers** → **Select STT Provider**
+2. Pick a provider, paste your API key, and pick a model from the suggestions
+3. Make sure an AI provider is configured too — transcripts are sent to it for an answer
 
 ### Custom STT Provider
 
 Same curl-template approach as AI providers. Your template receives:
 - `{{API_KEY}}` — your key
-- The audio file is sent as multipart form data
+- `{{AUDIO}}` — the recorded audio (16 kHz WAV), sent as a form field, raw body, or base64 depending on the template
 
-Configure in Dashboard → **Audio** tab.
+### Microphone Input
+
+Click the mic icon on the overlay bar. PruvoAI listens, detects when you stop speaking, transcribes that clip, and sends it to the AI. Click again to stop.
 
 ### System Audio Capture (Windows)
 
-Phantom can transcribe audio coming **out** of your speakers — useful for meetings, videos, or any live audio.
+PruvoAI can transcribe audio coming **out** of your speakers — useful for interviews, meetings, or videos.
 
-1. Dashboard → **Audio** → enable **System Audio**
-2. On first use, a setup wizard installs the virtual audio device driver
+1. Click the system-audio button on the overlay bar
+2. PruvoAI detects each spoken segment, transcribes it, and sends it to the AI as it happens
 3. Use the audio visualizer in the overlay bar to confirm capture is active
-4. Phantom transcribes in real time and streams the transcript into the response window
+
+Choose your microphone on the Dashboard → **Audio** page.
 
 ---
 
 ## Keyboard Shortcuts
 
-All shortcuts are **global** — they work even when Phantom's window isn't focused.
+All shortcuts are **global** — they work even when PruvoAI's window isn't focused.
 
 | Shortcut | Action |
 |----------|--------|
@@ -291,8 +298,8 @@ The dashboard (`Ctrl+Shift+D`) is your control center:
 | Section | What you can do |
 |---------|----------------|
 | **Chats** | Browse and search conversation history |
-| **Providers** | Add / edit / remove AI providers and API keys |
-| **Audio** | Configure STT provider, audio device, system audio |
+| **Providers** | Add / edit / remove AI and STT providers, API keys, and models |
+| **Audio** | Choose microphone and speaker devices |
 | **System Prompts** | Create and manage saved personas / instructions |
 | **Shortcuts** | Remap any global shortcut |
 | **Settings** | Theme, always-on-top, auto-start, clear history |
@@ -307,7 +314,7 @@ The dashboard (`Ctrl+Shift+D`) is your control center:
 3. The capture is automatically attached to your next message
 4. Type your question and press `Enter` — the image travels with your prompt
 
-Phantom encodes the screenshot as base64 and includes it in the API request, so models with vision support (GPT-4o, Claude 3, Gemini 1.5, etc.) can analyze it directly.
+PruvoAI encodes the screenshot as base64 and includes it in the API request, so models with vision support (GPT-4o, Claude 3, Gemini 1.5, etc.) can analyze it directly.
 
 ---
 
@@ -366,7 +373,7 @@ phantom/
 
 ## Contributing
 
-Phantom is GPL-3.0 open source. PRs, bug reports, and feature requests welcome.
+PruvoAI is GPL-3.0 open source. PRs, bug reports, and feature requests welcome.
 
 ```powershell
 # Run in dev mode
@@ -383,11 +390,13 @@ npm run build
 
 ## Repository
 
-[github.com/debajyoti2050/phantom](https://github.com/debajyoti2050/phantom)
+[github.com/techbro20/PruvoAI](https://github.com/techbro20/PruvoAI)
+
+Maintained by [techbro20](https://github.com/techbro20) — victor.immoh@gmail.com
 
 ## License
 
-GPL-3.0. See [`LICENSE`](LICENSE) and [`NOTICE.md`](NOTICE.md).
+GPL-3.0. Copyright (C) 2026 techbro20. See [`LICENSE`](LICENSE) and [`NOTICE.md`](NOTICE.md).
 
 ---
 

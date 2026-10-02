@@ -1,6 +1,6 @@
 import { ChatConversation } from "@/types";
 import { Markdown, Switch, CopyButton } from "@/components";
-import { BotIcon, HeadphonesIcon, Loader2, SparklesIcon } from "lucide-react";
+import { BotIcon, Loader2, SparklesIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -23,7 +23,7 @@ export const ResultsSection = ({
   const hasResponse = lastAIResponse || isAIProcessing;
   const hasHistory = conversation.messages.length > 2;
 
-  if (!hasResponse && !lastTranscription) {
+  if (!hasResponse) {
     return null;
   }
 
@@ -56,13 +56,6 @@ export const ResultsSection = ({
       {/* RESPONSE MODE: System as text, then AI response */}
       {!conversationMode && (
         <div className="space-y-2">
-          {/* System Input - Just text with bold label */}
-          {lastTranscription && (
-            <p className="text-[11px] text-muted-foreground">
-              <span className="font-semibold">System:</span> {lastTranscription}
-            </p>
-          )}
-
           {/* AI Response */}
           {hasResponse && (
             <div>
@@ -116,19 +109,6 @@ export const ResultsSection = ({
             </div>
           )}
 
-          {/* System Input - Second */}
-          {lastTranscription && (
-            <div className="rounded-md border-l-2 border-primary/50 bg-primary/5 p-2.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <HeadphonesIcon className="h-3 w-3 text-primary" />
-                <span className="text-[9px] font-medium text-primary uppercase tracking-wide">
-                  System
-                </span>
-              </div>
-              <p className="text-sm">{lastTranscription}</p>
-            </div>
-          )}
-
           {/* Previous Messages */}
           {hasHistory && (
             <div className="space-y-2 pt-2 border-t border-border/50">
@@ -138,6 +118,7 @@ export const ResultsSection = ({
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {conversation.messages
                   .slice(2)
+                  .filter((message) => message.role !== "user")
                   .sort((a, b) => b.timestamp - a.timestamp)
                   .map((message, index) => (
                     <div

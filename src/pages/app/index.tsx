@@ -4,12 +4,7 @@ import {
   DragButton,
   Updater,
 } from "@/components";
-import {
-  SystemAudio,
-  Completion,
-  AudioVisualizer,
-  StatusIndicator,
-} from "./components";
+import { SystemAudio, Completion } from "./components";
 import { useApp, useOverlayScale } from "@/hooks";
 import { useApp as useAppContext } from "@/contexts";
 import { PanelsTopLeftIcon } from "lucide-react";
@@ -63,34 +58,19 @@ const App = () => {
         >
           <DragButton />
 
-          {systemAudio?.capturing ? (
-            <div className="phantom-audio-strip">
-              <div className="flex flex-1 items-center gap-2">
-                <AudioVisualizer isRecording={systemAudio?.capturing} />
-              </div>
-              <StatusIndicator
-                setupRequired={systemAudio.setupRequired}
-                error={systemAudio.error}
-                isProcessing={systemAudio.isProcessing}
-                isAIProcessing={systemAudio.isAIProcessing}
-                capturing={systemAudio.capturing}
-              />
-            </div>
-          ) : (
-            <div className="phantom-command-strip">
-              <Completion isHidden={isHidden} />
-              <SystemAudio {...systemAudio} />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="phantom-icon-button"
-                title="Open dashboard"
-                onClick={openDashboard}
-              >
-                <PanelsTopLeftIcon className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="phantom-command-strip">
+            <Completion isHidden={isHidden} />
+            <SystemAudio {...systemAudio} />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="phantom-icon-button"
+              title="Open dashboard"
+              onClick={openDashboard}
+            >
+              <PanelsTopLeftIcon className="h-4 w-4" />
+            </Button>
+          </div>
 
           <Updater />
         </div>

@@ -42,7 +42,7 @@ jobs:
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: phantom-windows-${{ github.ref_name }}
+          name: pruvoai-windows-${{ github.ref_name }}
           path: |
             release/*.exe
             release/*.blockmap
@@ -83,7 +83,7 @@ jobs:
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: phantom-macos-${{ github.ref_name }}
+          name: pruvoai-macos-${{ github.ref_name }}
           path: |
             release/*.dmg
             release/*.zip
@@ -108,7 +108,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Phantom ${{ github.ref_name }}
+          name: PruvoAI ${{ github.ref_name }}
           files: artifacts/*
           fail_on_unmatched_files: true
           generate_release_notes: true

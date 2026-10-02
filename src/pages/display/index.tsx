@@ -143,7 +143,7 @@ const Display = () => {
   return (
     <PageLayout
       title="Display"
-      description="Choose where Phantom appears and which monitors can be captured."
+      description="Choose where PruvoAI appears and which monitors can be captured."
       rightSlot={
         <Button
           type="button"

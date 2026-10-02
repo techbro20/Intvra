@@ -29,22 +29,23 @@ const Dashboard = () => {
     [conversations.conversations, conversations.search]
   );
 
-  const groupedConversations = visibleConversations.reduce(
-    (acc, doc) => {
-      const dateKey = moment(doc.updatedAt).format("YYYY-MM-DD");
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(doc);
-      return acc;
-    },
-    {} as Record<string, typeof visibleConversations>
-  );
+  const { groupedConversations, sortedDates } = useMemo(() => {
+    const grouped = visibleConversations.reduce(
+      (acc, doc) => {
+        const dateKey = moment(doc.updatedAt).format("YYYY-MM-DD");
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(doc);
+        return acc;
+      },
+      {} as Record<string, typeof visibleConversations>
+    );
 
-  // Sort dates in descending order (most recent first)
-  const sortedDates = Object.keys(groupedConversations).sort((a, b) =>
-    moment(b).diff(moment(a))
-  );
+    // YYYY-MM-DD keys sort correctly as strings; most recent first
+    const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+    return { groupedConversations: grouped, sortedDates: dates };
+  }, [visibleConversations]);
 
   const toggleSelected = (conversationId: string) => {
     setSelectedIds((current) => {
@@ -210,7 +211,7 @@ const Dashboard = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <Badge variant="outline" className="text-xs">
-                              {doc.messages.length} messages
+                              {doc.messageCount} messages
                             </Badge>
                             <Badge variant="outline" className="text-xs">
                               {moment(doc.updatedAt).format("hh:mm A")}

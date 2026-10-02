@@ -294,7 +294,7 @@ const SystemPrompts = () => {
         onDelete={handleDeleteConfirm}
       />
 
-      {/* Phantom Default Prompts */}
+      {/* PruvoAI Default Prompts */}
       <PromptLibrary />
     </PageLayout>
   );

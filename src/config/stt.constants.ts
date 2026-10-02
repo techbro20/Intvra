@@ -1,3 +1,10 @@
+export const STT_MODEL_SUGGESTIONS: Record<string, string[]> = {
+  "openai-whisper": ["whisper-1", "gpt-4o-transcribe", "gpt-4o-mini-transcribe"],
+  groq: ["whisper-large-v3-turbo", "whisper-large-v3"],
+  "elevenlabs-stt": ["scribe_v1"],
+  "deepgram-stt": ["nova-3", "nova-2"],
+};
+
 export const SPEECH_TO_TEXT_PROVIDERS = [
   {
     id: "openai-whisper",
@@ -70,26 +77,6 @@ export const SPEECH_TO_TEXT_PROVIDERS = [
       -H "Content-Type: audio/wav" \\
       --data-binary {{AUDIO}}`,
     responseContentPath: "DisplayText",
-    streaming: false,
-  },
-  {
-    id: "speechmatics-stt",
-    name: "Speechmatics",
-    curl: `curl -X POST "https://asr.api.speechmatics.com/v2/jobs" \\
-      -H "Authorization: Bearer {{API_KEY}}" \\
-      -F "data_file={{AUDIO}}" \\
-      -F 'config={"type": "transcription", "transcription_config": {"language": "en"}}'`,
-    responseContentPath: "job.id",
-    streaming: false,
-  },
-  {
-    id: "rev-ai-stt",
-    name: "Rev.ai Speech-to-Text",
-    curl: `curl -X POST "https://api.rev.ai/speechtotext/v1/jobs" \\
-      -H "Authorization: Bearer {{API_KEY}}" \\
-      -F "media={{AUDIO}}" \\
-      -F "options={{OPTIONS}}"`,
-    responseContentPath: "id",
     streaming: false,
   },
   {

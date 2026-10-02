@@ -10,7 +10,7 @@ import { TYPE_PROVIDER } from "@/types";
 import curl2Json from "@bany/curl-to-json";
 import { shouldUseLocalAPI } from "./local-api";
 
-// Hosted STT function retained for compatibility. It is disabled in Phantom.
+// Hosted STT function retained for compatibility. It is disabled in PruvoAI.
 async function fetchLocalSTT(audio: File | Blob): Promise<string> {
   try {
     // Convert audio to base64
@@ -32,8 +32,27 @@ async function fetchLocalSTT(audio: File | Blob): Promise<string> {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return `Phantom hosted STT error: ${errorMessage}`;
+    return `PruvoAI hosted STT error: ${errorMessage}`;
   }
+}
+
+function getAudioFormField(form: unknown): string {
+  for (const [key, value] of Object.entries(
+    (form as Record<string, unknown>) || {}
+  )) {
+    if (typeof value !== "string" || !value.includes("{{AUDIO}}")) continue;
+    // curl2json stores some -F values under numeric keys as "name=value"
+    return isNaN(parseInt(key, 10)) ? key : value.split("=")[0] || "file";
+  }
+  return "file";
+}
+
+function getAudioFileName(mimeType: string): string {
+  if (mimeType.includes("webm")) return "audio.webm";
+  if (mimeType.includes("ogg")) return "audio.ogg";
+  if (mimeType.includes("mpeg") || mimeType.includes("mp3")) return "audio.mp3";
+  if (mimeType.includes("mp4") || mimeType.includes("m4a")) return "audio.m4a";
+  return "audio.wav";
 }
 
 export interface STTParams {
@@ -129,7 +148,8 @@ export async function fetchSTT(params: STTParams): Promise<string> {
       const freshBlob = new Blob([await audio.arrayBuffer()], {
         type: audio.type,
       });
-      form.append("file", freshBlob, "audio.wav");
+      const fileField = getAudioFormField(curlJson.form);
+      form.append(fileField, freshBlob, getAudioFileName(audio.type));
       const headerKeys = Object.keys(headers).map((k) =>
         k.toUpperCase().replace(/[-_]/g, "")
       );
@@ -151,7 +171,7 @@ export async function fetchSTT(params: STTParams): Promise<string> {
           const [formKey, ...formValueParts] = val.split("=");
           const formValue = formValueParts.join("=");
 
-          if (formKey.toLowerCase() === "file") continue; // Already handled by form.append('file', audio)
+          if (formKey.toLowerCase() === fileField.toLowerCase()) continue; // Already appended as the audio file
 
           if (
             !formValue ||
@@ -161,7 +181,7 @@ export async function fetchSTT(params: STTParams): Promise<string> {
 
           form.append(formKey, formValue);
         } else {
-          if (key.toLowerCase() === "file") continue; // Already handled by form.append('file', audio)
+          if (key.toLowerCase() === fileField.toLowerCase()) continue; // Already appended as the audio file
           if (
             !val ||
             headerKeys.includes(key.toUpperCase()) ||
@@ -178,6 +198,16 @@ export async function fetchSTT(params: STTParams): Promise<string> {
       body = new Blob([await audio.arrayBuffer()], {
         type: audio.type,
       });
+      const contentTypeKey = Object.keys(finalHeaders).find(
+        (key) => key.toLowerCase() === "content-type"
+      );
+      if (
+        contentTypeKey &&
+        audio.type &&
+        String(finalHeaders[contentTypeKey]).startsWith("audio/")
+      ) {
+        finalHeaders[contentTypeKey] = audio.type.split(";")[0];
+      }
     } else {
       // Google-style: JSON payload with base64
       allVariables.AUDIO = await blobToBase64(audio);
@@ -207,7 +237,11 @@ export async function fetchSTT(params: STTParams): Promise<string> {
       let errMsg: string;
       try {
         const errObj = JSON.parse(errText);
-        errMsg = errObj.message || errText;
+        errMsg =
+          errObj?.error?.message ||
+          errObj?.message ||
+          (typeof errObj?.detail === "string" ? errObj.detail : "") ||
+          errText;
       } catch {
         errMsg = errText || response.statusText;
       }

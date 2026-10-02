@@ -111,7 +111,7 @@ export const AI_PROVIDERS = [
   {
     id: "groq",
     name: "Groq",
-    defaultModel: "meta-llama/llama-4-scout-17b-16e-instruct",
+    defaultModel: "llama-3.3-70b-versatile",
     curl: `curl https://api.groq.com/openai/v1/chat/completions \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer {{API_KEY}}" \

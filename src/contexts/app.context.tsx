@@ -28,6 +28,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -152,7 +153,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     safeLocalStorage.setItem(STORAGE_KEYS.SUPPORTS_IMAGES, String(value));
   };
 
-  // Phantom is a local-only personal build. The hosted compatibility API is disabled.
+  // PruvoAI is a local-only personal build. The hosted compatibility API is disabled.
   const [localApiEnabled, setLocalApiEnabledState] = useState<boolean>(
     false
   );
@@ -543,16 +544,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedSttProvider]);
 
   // Computed all AI providers
-  const allAiProviders: TYPE_PROVIDER[] = [
-    ...AI_PROVIDERS,
-    ...customAiProviders,
-  ];
+  const allAiProviders: TYPE_PROVIDER[] = useMemo(
+    () => [...AI_PROVIDERS, ...customAiProviders],
+    [customAiProviders]
+  );
 
   // Computed all STT providers
-  const allSttProviders: TYPE_PROVIDER[] = [
-    ...SPEECH_TO_TEXT_PROVIDERS,
-    ...customSttProviders,
-  ];
+  const allSttProviders: TYPE_PROVIDER[] = useMemo(
+    () => [...SPEECH_TO_TEXT_PROVIDERS, ...customSttProviders],
+    [customSttProviders]
+  );
 
   const onSetSelectedAIProvider = ({
     provider,
@@ -665,8 +666,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     loadData();
   };
 
-  // Create the context value (extend IContextType accordingly)
-  const value: IContextType = {
+  // Every handler below only closes over state listed in the deps, so the
+  // value can be reused until one of those changes.
+  const value: IContextType = useMemo(() => ({
     systemPrompt,
     setSystemPrompt,
     allAiProviders,
@@ -694,7 +696,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setCursorType,
     supportsImages,
     setSupportsImages,
-  };
+  }), [
+    systemPrompt,
+    allAiProviders,
+    customAiProviders,
+    selectedAIProvider,
+    allSttProviders,
+    customSttProviders,
+    selectedSttProvider,
+    screenshotConfiguration,
+    customizable,
+    localApiEnabled,
+    hasActiveLicense,
+    selectedAudioDevices,
+    supportsImages,
+  ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

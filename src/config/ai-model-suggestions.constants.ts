@@ -27,9 +27,7 @@ export const AI_MODEL_SUGGESTIONS: Record<string, ModelSuggestion[]> = {
     { label: "Llama 3.3 70B", model: "llama-3.3-70b-versatile", description: "Versatile" },
     { label: "Llama 3.1 8B", model: "llama-3.1-8b-instant", description: "Instant" },
     { label: "GPT OSS 120B", model: "openai/gpt-oss-120b", description: "Large OSS" },
-    { label: "GPT OSS 20B", model: "openai/gpt-oss-20b", description: "Small OSS" },
-    { label: "Llama 4 Scout", model: "meta-llama/llama-4-scout-17b-16e-instruct", description: "Vision" },
-  ],
+    { label: "GPT OSS 20B", model: "openai/gpt-oss-20b", description: "Small OSS" },  ],
   "nvidia-nim": [
     { label: "Kimi K2.6", model: "moonshotai/kimi-k2.6", description: "Thinking" },
     { label: "Kimi K2.5", model: "moonshotai/kimi-k2.5", description: "Fallback" },

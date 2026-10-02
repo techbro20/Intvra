@@ -1,5 +1,5 @@
 import { getDatabase } from "./config";
-import { ChatConversation } from "@/types";
+import { ChatConversation, ChatConversationSummary } from "@/types";
 import { safeLocalStorage } from "@/lib";
 
 // Legacy localStorage key for migration purposes
@@ -140,6 +140,36 @@ export async function createConversation(
     await db
       .execute("DELETE FROM conversations WHERE id = ?", [conversation.id])
       .catch(() => {});
+    throw error;
+  }
+}
+
+/**
+ * Get conversation list metadata without loading message bodies or attachments
+ */
+export async function getConversationSummaries(): Promise<
+  ChatConversationSummary[]
+> {
+  const db = await getDatabase();
+
+  try {
+    const rows = await db.select<(DbConversation & { message_count: number })[]>(
+      `SELECT c.id, c.title, c.created_at, c.updated_at, COUNT(m.id) AS message_count
+       FROM conversations c
+       LEFT JOIN messages m ON m.conversation_id = c.id
+       GROUP BY c.id
+       ORDER BY c.updated_at DESC`
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      messageCount: Number(row.message_count) || 0,
+    }));
+  } catch (error) {
+    console.error("Failed to get conversation summaries:", error);
     throw error;
   }
 }

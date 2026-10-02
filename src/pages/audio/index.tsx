@@ -48,7 +48,7 @@ const Audio = () => {
         </p>
         <p className="mt-2 text-[#ffe7a6]/80">
           <strong>Note:</strong> if a selected device fails or is unavailable,
-          Phantom falls back to your system default audio devices.
+          PruvoAI falls back to your system default audio devices.
         </p>
       </div>
     </PageLayout>

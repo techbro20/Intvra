@@ -1,12 +1,70 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "fs";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
+
+// Voice activity detection loads its worklet, model and ONNX runtime by URL
+// at runtime, so they must exist as plain files next to index.html.
+const VAD_ASSETS: Record<string, string> = {
+  "vad.worklet.bundle.min.js":
+    "node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js",
+  "silero_vad_legacy.onnx":
+    "node_modules/@ricky0123/vad-web/dist/silero_vad_legacy.onnx",
+  "silero_vad_v5.onnx": "node_modules/@ricky0123/vad-web/dist/silero_vad_v5.onnx",
+  "ort-wasm-simd-threaded.wasm":
+    "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm",
+  "ort-wasm-simd-threaded.mjs":
+    "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+};
+
+const VAD_CONTENT_TYPES: Record<string, string> = {
+  ".js": "text/javascript",
+  ".mjs": "text/javascript",
+  ".wasm": "application/wasm",
+  ".onnx": "application/octet-stream",
+};
+
+function vadAssets(): Plugin {
+  const resolveAsset = (name: string) =>
+    VAD_ASSETS[name] ? path.resolve(__dirname, VAD_ASSETS[name]) : null;
+
+  return {
+    name: "phantom-vad-assets",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = (req.url || "").split("?")[0];
+        if (!url.startsWith("/vad/")) return next();
+        const file = resolveAsset(url.slice("/vad/".length));
+        if (!file || !fs.existsSync(file)) return next();
+        res.setHeader(
+          "Content-Type",
+          VAD_CONTENT_TYPES[path.extname(file)] || "application/octet-stream"
+        );
+        fs.createReadStream(file).pipe(res);
+      });
+    },
+    generateBundle() {
+      for (const name of Object.keys(VAD_ASSETS)) {
+        const file = resolveAsset(name);
+        if (!file || !fs.existsSync(file)) {
+          this.warn(`VAD asset missing: ${VAD_ASSETS[name]}`);
+          continue;
+        }
+        this.emitFile({
+          type: "asset",
+          fileName: `vad/${name}`,
+          source: fs.readFileSync(file),
+        });
+      }
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   base: "./",
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), vadAssets()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

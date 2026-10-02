@@ -176,7 +176,7 @@ export const SystemAudio = (props: useSystemAudioType) => {
     <Popover
       open={isPopoverOpen}
       onOpenChange={(open) => {
-        if (capturing && !open) {
+        if (open && !setupRequired && !error) {
           return;
         }
         setIsPopoverOpen(open);
@@ -263,20 +263,18 @@ export const SystemAudio = (props: useSystemAudioType) => {
                   )}
 
                   {/* Close Button */}
-                  {!capturing && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      title="Close"
-                      onClick={() => {
-                        setIsPopoverOpen(false);
-                        resizeWindow(false);
-                      }}
-                    >
-                      <XIcon className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
+                    title="Close"
+                    onClick={() => {
+                      setIsPopoverOpen(false);
+                      resizeWindow(false);
+                    }}
+                  >
+                    <XIcon className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </div>
             </div>

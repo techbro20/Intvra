@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  getAllConversations,
+  getConversationSummaries,
   deleteConversation,
   deleteAllConversations,
   DOWNLOAD_SUCCESS_DISPLAY_MS,
 } from "@/lib";
-import { ChatConversation } from "@/types/completion";
+import {
+  ChatConversation,
+  ChatConversationSummary,
+} from "@/types/completion";
 
 export type UseHistoryType = ReturnType<typeof useHistory>;
 
 export interface UseHistoryReturn {
   // State
-  conversations: ChatConversation[];
+  conversations: ChatConversationSummary[];
   selectedConversationId: string | null;
   viewingConversation: ChatConversation | null;
   downloadedConversations: Set<string>;
@@ -45,7 +48,9 @@ export interface UseHistoryReturn {
 
 export function useHistory(): UseHistoryReturn {
   const [isLoading, setIsLoading] = useState(false);
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [conversations, setConversations] = useState<
+    ChatConversationSummary[]
+  >([]);
   const [search, setSearch] = useState("");
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
@@ -65,7 +70,7 @@ export function useHistory(): UseHistoryReturn {
   const refreshConversations = useCallback(async () => {
     try {
       setIsLoading(true);
-      const loadedConversations = await getAllConversations();
+      const loadedConversations = await getConversationSummaries();
       setConversations(loadedConversations);
     } catch (error) {
       console.error("Failed to load conversations:", error);

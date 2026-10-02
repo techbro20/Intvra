@@ -2,10 +2,11 @@ import { fetchSTT } from "@/lib";
 import { UseCompletionReturn } from "@/types";
 import { useMicVAD } from "@ricky0123/vad-react";
 import { LoaderCircleIcon, MicIcon, MicOffIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components";
 import { useApp } from "@/contexts";
 import { floatArrayToWav } from "@/lib/utils";
+import { getVadAssetOptions } from "@/lib/vad";
 import { shouldUseLocalAPI } from "@/lib/functions/local-api";
 
 interface AutoSpeechVADProps {
@@ -40,6 +41,7 @@ const AutoSpeechVADInternal = ({
     });
 
   const vad = useMicVAD({
+    ...getVadAssetOptions(),
     userSpeakingThreshold: 0.6,
     startOnLoad: true,
     getStream: getAudioStream,
@@ -104,6 +106,15 @@ const AutoSpeechVADInternal = ({
       }
     },
   });
+
+  useEffect(() => {
+    if (!vad.errored) return;
+    setState((prev: any) => ({
+      ...prev,
+      notice: null,
+      error: `Voice input failed to start: ${vad.errored}`,
+    }));
+  }, [vad.errored]);
 
   return (
     <>

@@ -28,7 +28,7 @@ async function pickPort() {
       return port;
     }
   }
-  throw new Error(`No free Phantom dev port found. Tried: ${PORTS.join(", ")}`);
+  throw new Error(`No free PruvoAI dev port found. Tried: ${PORTS.join(", ")}`);
 }
 
 function waitForUrl(url) {
@@ -65,7 +65,7 @@ function spawnProcess(command, args, env = {}) {
 const port = await pickPort();
 const devUrl = `http://${HOST}:${port}`;
 
-console.log(`Phantom dev server using ${devUrl}`);
+console.log(`PruvoAI dev server using ${devUrl}`);
 
 const vite = spawnProcess(
   process.execPath,

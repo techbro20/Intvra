@@ -116,7 +116,7 @@ export function buildOcrUserMessage(
     (context) => context.source === "accessibility"
   );
   const instruction = hasAccessibility
-    ? "Answer using the extracted text. If layout, images, video, or visual details are required, say that no screenshot image was sent in Phantom Ultra Instinct Mode."
+    ? "Answer using the extracted text. If layout, images, video, or visual details are required, say that no screenshot image was sent in PruvoAI Ultra Instinct Mode."
     : "Answer using the extracted text. If layout or visual details are required, say that the screenshot image was not sent in OCR Text Only mode.";
 
   return `${cleanPrompt}\n\n${ocrText}\n\n${instruction}`;
@@ -136,7 +136,7 @@ export async function prepareAccessibilityTextPayload(): Promise<AccessibilityTe
       return {
         kind: "no_accessibility_text",
         notice:
-          "Phantom Ultra Instinct Mode is only available on Windows in this version.",
+          "PruvoAI Ultra Instinct Mode is only available on Windows in this version.",
       };
     }
 
@@ -148,8 +148,8 @@ export async function prepareAccessibilityTextPayload(): Promise<AccessibilityTe
       return {
         kind: "no_accessibility_text",
         notice: result.error
-          ? `No window text found through Phantom Ultra Instinct Mode. ${result.error}`
-          : "No window text found through Phantom Ultra Instinct Mode. No screenshot was taken.",
+          ? `No window text found through PruvoAI Ultra Instinct Mode. ${result.error}`
+          : "No window text found through PruvoAI Ultra Instinct Mode. No screenshot was taken.",
       };
     }
 
@@ -166,13 +166,13 @@ export async function prepareAccessibilityTextPayload(): Promise<AccessibilityTe
         truncated: truncated || Boolean(result.truncated),
       },
       notice: truncated || result.truncated
-        ? "Phantom Ultra Instinct Mode captured active-window text and truncated it before sending. No screenshot image was sent."
-        : "Phantom Ultra Instinct Mode captured active-window text. No screenshot image was sent.",
+        ? "PruvoAI Ultra Instinct Mode captured active-window text and truncated it before sending. No screenshot image was sent."
+        : "PruvoAI Ultra Instinct Mode captured active-window text. No screenshot image was sent.",
     };
   } catch (error) {
     return {
       kind: "no_accessibility_text",
-      notice: `Phantom Ultra Instinct Mode could not read active-window text. No screenshot was taken.${
+      notice: `PruvoAI Ultra Instinct Mode could not read active-window text. No screenshot was taken.${
         error instanceof Error ? ` ${error.message}` : ""
       }`,
     };
@@ -201,7 +201,7 @@ export async function prepareScreenshotPayload(
       return {
         kind: "image",
         imageBase64,
-        notice: "No readable OCR text was found. Phantom sent the screenshot image instead.",
+        notice: "No readable OCR text was found. PruvoAI sent the screenshot image instead.",
       };
     }
 
@@ -223,7 +223,7 @@ export async function prepareScreenshotPayload(
     return {
       kind: "image",
       imageBase64,
-      notice: `OCR failed locally. Phantom sent the screenshot image instead.${
+      notice: `OCR failed locally. PruvoAI sent the screenshot image instead.${
         error instanceof Error ? ` ${error.message}` : ""
       }`,
     };

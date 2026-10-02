@@ -245,7 +245,7 @@ export const ScreenshotConfigs = ({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Label className="text-sm font-semibold">
-                    Phantom Ultra Instinct Mode
+                    PruvoAI Ultra Instinct Mode
                   </Label>
                   <span className="rounded-full border border-cyan-200/15 bg-cyan-300/10 px-2 py-0.5 text-[0.65rem] font-medium text-cyan-100">
                     Windows only
@@ -272,7 +272,7 @@ export const ScreenshotConfigs = ({
               checked={Boolean(screenshotConfiguration.ultraInstinctEnabled)}
               disabled={!isWindows}
               onCheckedChange={handleUltraInstinctEnabledChange}
-              aria-label="Toggle Phantom Ultra Instinct Mode"
+              aria-label="Toggle PruvoAI Ultra Instinct Mode"
             />
           </div>
         </div>
@@ -283,7 +283,7 @@ export const ScreenshotConfigs = ({
               title="Screenshot Payload"
               description={
                 screenshotConfiguration.ultraInstinctEnabled
-                  ? "Ultra Instinct Mode is active, so Phantom reads window text without creating a screenshot payload."
+                  ? "Ultra Instinct Mode is active, so PruvoAI reads window text without creating a screenshot payload."
                   : screenshotConfiguration.payloadMode === "ocr_text"
                   ? "OCR runs locally. Screenshots are not sent when text is detected."
                   : "Send the screenshot image to the selected AI provider."

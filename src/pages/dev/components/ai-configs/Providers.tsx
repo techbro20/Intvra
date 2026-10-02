@@ -16,7 +16,7 @@ import {
   saveProviderApiKeyProfiles,
 } from "@/lib/storage/provider-api-keys";
 import { getModelSuggestions, ModelSuggestion } from "@/config";
-import { deepVariableReplacer } from "@/lib/functions";
+import { fetchAvailableModels } from "@/lib/functions";
 import { cn } from "@/lib/utils";
 import { UseSettingsReturn } from "@/types";
 import anthropicLogo from "@lobehub/icons-static-svg/icons/anthropic.svg?url";
@@ -30,7 +30,6 @@ import ollamaLogo from "@lobehub/icons-static-svg/icons/ollama.svg?url";
 import openAiLogo from "@lobehub/icons-static-svg/icons/openai.svg?url";
 import openRouterLogo from "@lobehub/icons-static-svg/icons/openrouter.svg?url";
 import perplexityLogo from "@lobehub/icons-static-svg/icons/perplexity-color.svg?url";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import curl2Json, { ResultJSON } from "@bany/curl-to-json";
 import {
   ArrowDownIcon,
@@ -227,57 +226,6 @@ function promoteModelToPrimary(
   ];
 }
 
-function buildModelRefreshEndpoint(providerId: string | undefined, url = "") {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    if (providerId === "ollama") {
-      return `${parsed.origin}/api/tags`;
-    }
-    if (providerId === "cohere") {
-      return `${parsed.origin}/v2/models`;
-    }
-    if (parsed.pathname.includes("/chat/completions")) {
-      parsed.pathname = parsed.pathname.replace("/chat/completions", "/models");
-      parsed.search = "";
-      return parsed.toString();
-    }
-    if (parsed.pathname.includes("/messages")) {
-      parsed.pathname = parsed.pathname.replace("/messages", "/models");
-      parsed.search = "";
-      return parsed.toString();
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function extractModelCodesFromResponse(
-  providerId: string | undefined,
-  json: any
-): string[] {
-  if (providerId === "ollama" && Array.isArray(json?.models)) {
-    return json.models
-      .map((model: any) => String(model?.name || "").trim())
-      .filter(Boolean);
-  }
-
-  if (Array.isArray(json?.data)) {
-    return json.data
-      .map((model: any) => String(model?.id || model?.name || "").trim())
-      .filter(Boolean);
-  }
-
-  if (Array.isArray(json?.models)) {
-    return json.models
-      .map((model: any) => String(model?.id || model?.name || "").trim())
-      .filter(Boolean);
-  }
-
-  return [];
-}
-
 export const Providers = ({
   allAiProviders,
   selectedAIProvider,
@@ -297,6 +245,7 @@ export const Providers = ({
   const [modelSearch, setModelSearch] = useState("");
   const [modelStatus, setModelStatus] = useState("");
   const [isRefreshingModels, setIsRefreshingModels] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
   const selectedProvider = allAiProviders?.find(
     (p) => p?.id === selectedAIProvider?.provider
@@ -317,7 +266,7 @@ export const Providers = ({
   );
   const modelProfiles = selectedApiKeyProfile?.models || [];
   const primaryModel = modelProfiles.find((model) => model.enabled !== false);
-  const suggestedModels = useMemo(() => {
+  const staticSuggestedModels = useMemo(() => {
     const defaults = getModelSuggestions(selectedAIProvider?.provider);
     const defaultModel = selectedProvider?.defaultModel?.trim();
     if (
@@ -338,6 +287,17 @@ export const Providers = ({
     }
     return defaults;
   }, [selectedAIProvider?.provider, selectedProvider?.defaultModel]);
+  const suggestedModels: ModelSuggestion[] = useMemo(
+    () =>
+      availableModels.length
+        ? availableModels.map((model) => ({
+            label: model,
+            model,
+            description: "Available on this key",
+          }))
+        : staticSuggestedModels,
+    [availableModels, staticSuggestedModels]
+  );
   const filteredSuggestedModels = useMemo(() => {
     const search = modelSearch.trim().toLowerCase();
     if (!search) return suggestedModels;
@@ -384,6 +344,10 @@ export const Providers = ({
     setModelDraft("");
     setModelSearch("");
   }, [selectedAIProvider?.provider, selectedApiKeyId]);
+
+  useEffect(() => {
+    setAvailableModels([]);
+  }, [selectedAIProvider?.provider]);
 
   const getNextApiKeyProfileName = useCallback(
     (profiles = apiKeyProfiles) =>
@@ -706,11 +670,11 @@ export const Providers = ({
   );
 
   const handleAddPopularDefaults = useCallback(async () => {
-    if (!modelVar || !suggestedModels.length) return;
+    if (!modelVar || !staticSuggestedModels.length) return;
     const profile = await updateSelectedProfileModels((models) =>
       mergeModelProfiles(
         models,
-        suggestedModels.map((suggestion) =>
+        staticSuggestedModels.map((suggestion) =>
           createModelProfile(suggestion.model, "suggested", suggestion.label)
         )
       )
@@ -723,81 +687,71 @@ export const Providers = ({
       setModelStatus("Popular models added");
       window.setTimeout(() => setModelStatus(""), 1800);
     }
-  }, [modelVar, suggestedModels, updateSelectedProfileModels]);
+  }, [modelVar, staticSuggestedModels, updateSelectedProfileModels]);
 
-  const handleRefreshModels = useCallback(async () => {
-    if (!localSelectedProvider?.url) return;
-    const endpoint = buildModelRefreshEndpoint(
+  const discoverModels = useCallback(
+    async ({ force = false, silent = false } = {}) => {
+      if (!localSelectedProvider?.url) return;
+      if (apiKeyVar && !apiKeyValue.trim()) return;
+
+      setIsRefreshingModels(true);
+      try {
+        const models = await fetchAvailableModels({
+          providerId: selectedAIProvider?.provider,
+          url: localSelectedProvider.url,
+          headers: localSelectedProvider.header as Record<string, string>,
+          variables: selectedAIProvider.variables || {},
+          kind: "chat",
+          force,
+        });
+        if (models === null) {
+          if (!silent) {
+            setModelStatus("Model list is not available for this provider");
+            window.setTimeout(() => setModelStatus(""), 2200);
+          }
+          return;
+        }
+        setAvailableModels(models);
+        setModelStatus(
+          models.length
+            ? `${models.length} models available`
+            : "No chat models returned"
+        );
+        window.setTimeout(() => setModelStatus(""), 2200);
+      } catch (error) {
+        setAvailableModels([]);
+        setModelStatus(
+          error instanceof Error ? error.message : "Model refresh failed"
+        );
+        window.setTimeout(() => setModelStatus(""), 3200);
+      } finally {
+        setIsRefreshingModels(false);
+      }
+    },
+    [
+      apiKeyValue,
+      apiKeyVar,
+      localSelectedProvider?.header,
+      localSelectedProvider?.url,
       selectedAIProvider?.provider,
-      localSelectedProvider.url
+      selectedAIProvider.variables,
+    ]
+  );
+
+  const handleRefreshModels = useCallback(
+    () => discoverModels({ force: true }),
+    [discoverModels]
+  );
+
+  useEffect(() => {
+    if (apiKeyVar && !apiKeyValue.trim()) return;
+    const timeout = window.setTimeout(
+      () => void discoverModels({ silent: true }),
+      1000
     );
-    if (!endpoint) {
-      setModelStatus("Model refresh is not available for this provider");
-      window.setTimeout(() => setModelStatus(""), 2200);
-      return;
-    }
-
-    setIsRefreshingModels(true);
-    try {
-      const replacementVariables = {
-        ...Object.fromEntries(
-          Object.entries(selectedAIProvider.variables || {}).map(
-            ([key, value]) => [key.toUpperCase(), value]
-          )
-        ),
-      };
-      const headers = deepVariableReplacer(
-        localSelectedProvider.header || {},
-        replacementVariables
-      );
-      const response = await tauriFetch(endpoint, {
-        method: "GET",
-        headers,
-      });
-      if (!response.ok) {
-        setModelStatus(`Refresh failed: ${response.status}`);
-        window.setTimeout(() => setModelStatus(""), 2200);
-        return;
-      }
-
-      const json = await response.json();
-      const modelCodes = extractModelCodesFromResponse(
-        selectedAIProvider?.provider,
-        json
-      ).slice(0, 40);
-      if (!modelCodes.length) {
-        setModelStatus("No models returned");
-        window.setTimeout(() => setModelStatus(""), 2200);
-        return;
-      }
-
-      const profile = await updateSelectedProfileModels((models) =>
-        mergeModelProfiles(
-          models,
-          modelCodes.map((model) =>
-            createModelProfile(model, "discovered", model)
-          )
-        )
-      );
-      if (profile) {
-        setModelStatus(`${modelCodes.length} models refreshed`);
-        window.setTimeout(() => setModelStatus(""), 2200);
-      }
-    } catch (error) {
-      setModelStatus(
-        error instanceof Error ? error.message : "Model refresh failed"
-      );
-      window.setTimeout(() => setModelStatus(""), 2200);
-    } finally {
-      setIsRefreshingModels(false);
-    }
-  }, [
-    localSelectedProvider?.header,
-    localSelectedProvider?.url,
-    selectedAIProvider?.provider,
-    selectedAIProvider.variables,
-    updateSelectedProfileModels,
-  ]);
+    return () => window.clearTimeout(timeout);
+    // Re-run only when the key or provider changes, not on every variable edit
+  }, [apiKeyValue, selectedAIProvider?.provider, localSelectedProvider?.url]);
 
   const handleMoveApiKeyProfile = useCallback(
     async (profileId: string, direction: -1 | 1) => {
@@ -882,7 +836,7 @@ export const Providers = ({
         <div className="flex flex-col gap-3 border-b border-white/10 pb-4 lg:flex-row lg:items-end lg:justify-between">
           <Header
             title="Providers"
-            description="Connect and manage the AI models you want to use with Phantom."
+            description="Connect and manage the AI models you want to use with PruvoAI."
             titleClassName="text-2xl"
             descriptionClassName="text-sm"
           />
@@ -1016,7 +970,7 @@ export const Providers = ({
                     Failover Order
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Phantom tries every enabled model for this key before
+                    PruvoAI tries every enabled model for this key before
                     switching to the next API key.
                   </p>
                 </div>
@@ -1322,7 +1276,7 @@ export const Providers = ({
                       })
                     ) : (
                       <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-muted-foreground">
-                        Add a model to this key. Phantom will try models here
+                        Add a model to this key. PruvoAI will try models here
                         before it tries the next API key.
                       </p>
                     )}
@@ -1351,7 +1305,7 @@ export const Providers = ({
                         type="button"
                         variant="outline"
                         className="h-10"
-                        disabled={!suggestedModels.length}
+                        disabled={!staticSuggestedModels.length}
                         onClick={() => void handleAddPopularDefaults()}
                         title="Add all suggested models to this key"
                       >
@@ -1384,7 +1338,12 @@ export const Providers = ({
                         className="h-9 rounded-xl border-cyan-200/15 bg-black/25 pl-9 text-xs"
                       />
                     </div>
-                    <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1">
+                    <p className="text-[11px] text-muted-foreground">
+                      {availableModels.length
+                        ? "Models available on this API key - click one to use it."
+                        : "Suggested models - add your key to see what it can use."}
+                    </p>
+                    <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
                       {filteredSuggestedModels.length ? (
                         filteredSuggestedModels.map((suggestion) => (
                           <button

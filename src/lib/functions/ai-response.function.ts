@@ -218,6 +218,20 @@ function getVariableKey(
   )?.key;
 }
 
+// Groq rejects reasoning_effort for non-reasoning models, and Qwen 3 only
+// accepts "none" or "default".
+function adjustGroqReasoningEffort(providerId: string | undefined, body: any) {
+  if (providerId !== "groq" || !body || typeof body !== "object") return;
+  if (!("reasoning_effort" in body)) return;
+  const model = String(body.model || "");
+  if (/gpt-oss/i.test(model)) return;
+  if (/qwen3/i.test(model)) {
+    body.reasoning_effort = "default";
+    return;
+  }
+  delete body.reasoning_effort;
+}
+
 function sanitizeModelList(profile: ProviderApiKeyProfile, defaultModel = "") {
   const enabledModels = (profile.models || [])
     .filter((model) => model.enabled !== false && model.model.trim())
@@ -377,7 +391,7 @@ function buildEnhancedSystemPrompt(baseSystemPrompt?: string): string {
   return prompts.join(" ");
 }
 
-// Hosted AI streaming function retained for compatibility. It is disabled in Phantom.
+// Hosted AI streaming function retained for compatibility. It is disabled in PruvoAI.
 async function* fetchLocalAIResponse(params: {
   systemPrompt?: string;
   userMessage: string;
@@ -491,7 +505,7 @@ async function* fetchLocalAIResponse(params: {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    yield `Phantom hosted API error: ${errorMessage}`;
+    yield `PruvoAI hosted API error: ${errorMessage}`;
   }
 }
 
@@ -701,6 +715,7 @@ export async function* fetchAIResponse(params: {
       };
 
       bodyObj = deepVariableReplacer(bodyObj, allVariables);
+      adjustGroqReasoningEffort(provider?.id, bodyObj);
       const url = deepVariableReplacer(curlJson.url || "", allVariables);
       const headers = deepVariableReplacer(curlJson.header || {}, allVariables);
       headers["Content-Type"] = "application/json";
@@ -912,7 +927,7 @@ export async function* fetchAIResponse(params: {
         getByPath(json, provider?.responseContentPath || "") || "";
       yield (
         content ||
-        "The provider returned a response, but Phantom could not extract any text. Check the response content path for this provider."
+        "The provider returned a response, but PruvoAI could not extract any text. Check the response content path for this provider."
       );
       return;
     }
@@ -1001,7 +1016,7 @@ export async function* fetchAIResponse(params: {
     }
 
     if (!yieldedContent && !signal?.aborted) {
-      yield "The provider returned a streaming response, but Phantom could not extract any text. Check the response content path or turn off streaming for this provider.";
+      yield "The provider returned a streaming response, but PruvoAI could not extract any text. Check the response content path or turn off streaming for this provider.";
     }
   } catch (error) {
     throw new Error(

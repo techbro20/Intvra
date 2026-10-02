@@ -194,12 +194,38 @@ function getActivityStatus(activity: AIResponseActivity) {
   };
 }
 
+function getActivityLabel(activity: AIResponseActivity) {
+  switch (activity.type) {
+    case "try_key":
+    case "switch_model":
+      return "Retrying…";
+    case "connected":
+      return "Connected";
+    case "cooldown":
+      return "Cooling down";
+    case "quota":
+      return "Quota reached";
+    case "exhausted":
+      return activity.label.startsWith("Fallback exhausted")
+        ? activity.label
+        : "Fallback exhausted";
+    default:
+      return activity.label;
+  }
+}
+
 export function ResponseOverlayWindow() {
   const [state, setState] = useState<ResponseWindowState>(emptyState);
   const [followUp, setFollowUp] = useState("");
   const { metrics: overlayMetrics } = useOverlayScale();
   const captureStatus = getCaptureStatus(state.notice);
-  const latestActivities = (state.activities || []).slice(-3);
+  const latestActivities = (state.activities || [])
+    .map((activity) => ({ ...activity, label: getActivityLabel(activity) }))
+    .filter(
+      (activity, index, all) =>
+        index === 0 || all[index - 1].label !== activity.label
+    )
+    .slice(-3);
   const stateLabel = state.error
     ? "Error"
     : state.isLoading
@@ -308,30 +334,14 @@ export function ResponseOverlayWindow() {
                 {state.keepEngaged ? (
                   <span className="phantom-state-chip is-pinned">Pinned</span>
                 ) : null}
-                {state.route?.model ? (
-                  <span
-                    className="phantom-route-chip"
-                    title={`Model: ${state.route.model}`}
-                  >
-                    Model: {state.route.model}
-                  </span>
-                ) : null}
-                {state.route?.keyName ? (
-                  <span
-                    className="phantom-route-chip"
-                    title={`Key: ${state.route.keyName}`}
-                  >
-                    Key: {state.route.keyName}
-                  </span>
-                ) : null}
               </div>
               {latestActivities.length ? (
                 <div className="phantom-response-activity-row">
-                  {latestActivities.map((activity) => {
+                  {latestActivities.map((activity, index) => {
                     const activityStatus = getActivityStatus(activity);
                     return (
                       <span
-                        key={`${activity.timestamp}-${activity.type}-${activity.model || activity.keyName || ""}`}
+                        key={`${activity.timestamp}-${activity.type}-${index}`}
                         className={`phantom-activity-chip ${activityStatus.className}`}
                         title={activity.label}
                       >

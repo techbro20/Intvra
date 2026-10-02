@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components";
+import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { ErrorLayout } from "./ErrorLayout";
@@ -25,7 +26,9 @@ export const DashboardLayout = () => {
         <Sidebar />
         {/* Main Content */}
         <main className="phantom-main">
-          <Outlet />
+          <Suspense fallback={null}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </ErrorBoundary>

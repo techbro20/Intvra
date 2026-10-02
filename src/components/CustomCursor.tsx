@@ -9,17 +9,20 @@ export const CustomCursor = () => {
   const [isDragHover, setIsDragHover] = useState(false);
 
   useEffect(() => {
-    let rafId: number;
+    let rafId: number | null = null;
 
     const updateCursorPosition = () => {
+      rafId = null;
       if (cursorRef.current && isVisibleRef.current) {
         cursorRef.current.style.transform = `translate3d(${positionRef.current.x}px, ${positionRef.current.y}px, 0)`;
       }
-      rafId = requestAnimationFrame(updateCursorPosition);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       positionRef.current = { x: e.clientX, y: e.clientY };
+      if (rafId === null) {
+        rafId = requestAnimationFrame(updateCursorPosition);
+      }
       const target = e.target as HTMLElement | null;
       const nextIsDragHover = Boolean(
         target?.closest('[data-tauri-drag-region="true"]')
@@ -48,12 +51,9 @@ export const CustomCursor = () => {
     const handleWindowBlur = () => {
       isVisibleRef.current = false;
       if (cursorRef.current) {
-        cursorRef.current.style.display = "0";
+        cursorRef.current.style.opacity = "0";
       }
     };
-
-    // Start the animation loop
-    rafId = requestAnimationFrame(updateCursorPosition);
 
     // Add event listeners
     document.addEventListener("mousemove", handleMouseMove, { passive: true });
@@ -64,7 +64,7 @@ export const CustomCursor = () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
       window.removeEventListener("blur", handleWindowBlur);
-      cancelAnimationFrame(rafId);
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, []);
 

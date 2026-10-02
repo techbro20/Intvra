@@ -21,6 +21,10 @@ import {
   AIResponseActivity,
   AIResponseRoute,
 } from "@/lib";
+import {
+  INTERVIEWER_SPEECH_EVENT,
+  withInterviewerContext,
+} from "@/lib/interviewer-transcript";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -276,7 +280,7 @@ export const useCompletion = () => {
           for await (const chunk of fetchAIResponse({
             provider: useLocalAPI ? undefined : provider,
             selectedProvider: selectedAIProvider,
-            systemPrompt: systemPrompt || undefined,
+            systemPrompt: withInterviewerContext(systemPrompt),
             history: messageHistory,
             userMessage: inputWithOcr,
             imagesBase64,
@@ -520,6 +524,183 @@ export const useCompletion = () => {
     [state.currentConversationId, state.conversationHistory]
   );
 
+  const saveInterviewAnswer = useCallback(
+    async (answer: string) => {
+      const conversationId =
+        state.currentConversationId || generateConversationId("chat");
+      const timestamp = Date.now();
+
+      const assistantMsg: ChatMessage = {
+        id: generateMessageId("assistant", timestamp),
+        role: "assistant",
+        content: answer,
+        timestamp,
+      };
+      const newMessages = [...state.conversationHistory, assistantMsg];
+
+      let existingConversation = null;
+      if (state.currentConversationId) {
+        try {
+          existingConversation = await getConversationById(
+            state.currentConversationId
+          );
+        } catch (error) {
+          console.error("Failed to get existing conversation:", error);
+        }
+      }
+
+      const conversation: ChatConversation = {
+        id: conversationId,
+        title:
+          existingConversation?.title ||
+          `Interview ${new Date(timestamp).toLocaleString([], {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}`,
+        messages: newMessages,
+        createdAt: existingConversation?.createdAt || timestamp,
+        updatedAt: timestamp,
+      };
+
+      try {
+        await saveConversation(conversation);
+        setState((prev) => ({
+          ...prev,
+          currentConversationId: conversationId,
+          conversationHistory: newMessages,
+        }));
+      } catch (error) {
+        console.error("Failed to save interview answer:", error);
+      }
+    },
+    [state.currentConversationId, state.conversationHistory]
+  );
+
+  // Interviewer questions are sent to the model but never shown or saved;
+  // only the streamed answer is displayed and persisted.
+  const answerInterviewerSpeech = useCallback(
+    async (transcription: string) => {
+      const question = transcription.trim();
+      if (!question) return;
+
+      const requestId = generateRequestId();
+      currentRequestIdRef.current = requestId;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+
+      const useLocalAPI = await shouldUseLocalAPI();
+      const provider = allAiProviders.find(
+        (p) => p.id === selectedAIProvider.provider
+      );
+      if (!useLocalAPI && (!selectedAIProvider.provider || !provider)) {
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          notice: null,
+          error:
+            "No AI provider is configured. Open Dev Space and add your API key and model name.",
+        }));
+        return;
+      }
+
+      setState((prev) => ({
+        ...prev,
+        isLoading: true,
+        error: null,
+        notice: null,
+        response: "",
+        responseActivities: [],
+        responseRoute: null,
+      }));
+
+      const messageHistory = state.conversationHistory.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      let fullResponse = "";
+      try {
+        for await (const chunk of fetchAIResponse({
+          provider: useLocalAPI ? undefined : provider,
+          selectedProvider: selectedAIProvider,
+          systemPrompt: withInterviewerContext(systemPrompt),
+          history: messageHistory,
+          userMessage: `The interviewer just said: "${question}"\n\nReply with exactly what I should say back, in first person, ready to speak aloud.`,
+          imagesBase64: [],
+          signal,
+          onFallbackActivity: appendResponseActivity,
+          onResolvedRoute: setResponseRoute,
+          onResolvedSelectedProvider: onSetSelectedAIProvider,
+        })) {
+          if (currentRequestIdRef.current !== requestId || signal.aborted) {
+            return;
+          }
+          fullResponse += chunk;
+          setState((prev) => ({
+            ...prev,
+            response: prev.response + chunk,
+          }));
+        }
+      } catch (e: any) {
+        if (currentRequestIdRef.current === requestId && !signal.aborted) {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            notice: null,
+            error: e?.message || "An error occurred",
+          }));
+        }
+        return;
+      }
+
+      if (currentRequestIdRef.current !== requestId || signal.aborted) {
+        return;
+      }
+
+      setState((prev) => ({ ...prev, isLoading: false }));
+
+      if (fullResponse) {
+        await saveInterviewAnswer(fullResponse);
+      }
+    },
+    [
+      selectedAIProvider,
+      allAiProviders,
+      systemPrompt,
+      state.conversationHistory,
+      appendResponseActivity,
+      setResponseRoute,
+      onSetSelectedAIProvider,
+      saveInterviewAnswer,
+    ]
+  );
+
+  const answerInterviewerSpeechRef = useRef(answerInterviewerSpeech);
+  answerInterviewerSpeechRef.current = answerInterviewerSpeech;
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let disposed = false;
+
+    listen<string>(INTERVIEWER_SPEECH_EVENT, (event) => {
+      void answerInterviewerSpeechRef.current(String(event.payload || ""));
+    }).then((fn) => {
+      if (disposed) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
   // Listen for conversation events from the main ChatHistory component
   useEffect(() => {
     const handleConversationSelected = async (event: any) => {
@@ -725,7 +906,7 @@ export const useCompletion = () => {
             for await (const chunk of fetchAIResponse({
               provider: useLocalAPI ? undefined : provider,
               selectedProvider: selectedAIProvider,
-              systemPrompt: systemPrompt || undefined,
+              systemPrompt: withInterviewerContext(systemPrompt),
               history: messageHistory,
               userMessage,
               imagesBase64,
@@ -1134,7 +1315,7 @@ export const useCompletion = () => {
       response: "",
       error: null,
       notice: config.ultraInstinctEnabled
-        ? "Phantom Ultra Instinct Mode is reading active-window text..."
+        ? "PruvoAI Ultra Instinct Mode is reading active-window text..."
         : config.enabled
         ? "Capturing screenshot..."
         : "Select an area to capture. The response panel will update after capture.",
@@ -1175,7 +1356,7 @@ export const useCompletion = () => {
             setState((prev) => ({
               ...prev,
               error:
-                "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen & System Audio Recording. If you don't see Phantom in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
+                "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen & System Audio Recording. If you don't see PruvoAI in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
               notice: null,
             }));
             setIsScreenshotLoading(false);

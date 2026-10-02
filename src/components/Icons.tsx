@@ -4,7 +4,7 @@ import phantomLogoUrl from "../../build/icon.png?url";
 
 export const PhantomLogo = ({
   className,
-  alt = "Phantom",
+  alt = "PruvoAI",
   ...props
 }: ImgHTMLAttributes<HTMLImageElement>) => (
   <img

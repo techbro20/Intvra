@@ -19,6 +19,11 @@ import {
   generateMessageId,
 } from "@/lib";
 import { Message } from "@/types/completion";
+import {
+  addInterviewerTranscript,
+  INTERVIEWER_SPEECH_EVENT,
+} from "@/lib/interviewer-transcript";
+import { emitPhantomEvent } from "@/lib/electron/event-bus";
 
 // VAD Configuration interface matching Rust
 export interface VadConfig {
@@ -200,6 +205,7 @@ export function useSystemAudio() {
           const reason = event.payload as string;
           console.log("Speech discarded:", reason);
           // Don't show error - this is expected behavior
+          setIsProcessing(false);
         });
       } catch (err) {
         console.error("Failed to setup continuous recording listeners:", err);
@@ -274,22 +280,9 @@ export function useSystemAudio() {
               ]);
 
               if (transcription.trim()) {
-                setLastTranscription(transcription);
+                addInterviewerTranscript(transcription);
                 setError("");
-
-                const effectiveSystemPrompt = useSystemPrompt
-                  ? systemPrompt || DEFAULT_SYSTEM_PROMPT
-                  : contextContent || DEFAULT_SYSTEM_PROMPT;
-
-                const previousMessages = conversation.messages.map((msg) => {
-                  return { role: msg.role, content: msg.content };
-                });
-
-                await processWithAI(
-                  transcription,
-                  effectiveSystemPrompt,
-                  previousMessages
-                );
+                emitPhantomEvent(INTERVIEWER_SPEECH_EVENT, transcription);
               } else {
                 setError("Received empty transcription");
               }
@@ -563,8 +556,6 @@ export function useSystemAudio() {
         return;
       }
 
-      const isContinuous = !vadConfig.enabled;
-
       // Set up conversation
       const conversationId = generateConversationId("sysaudio");
       setConversation({
@@ -576,17 +567,11 @@ export function useSystemAudio() {
       });
 
       setCapturing(true);
-      setIsPopoverOpen(true);
-      setIsContinuousMode(isContinuous);
+      setIsContinuousMode(false);
       setRecordingProgress(0);
 
-      // If continuous mode
-      if (isContinuous) {
-        setIsRecordingInContinuousMode(false);
-        return;
-      }
-
-      // VAD mode: Start recording immediately
+      // Answers stream into the response window, so always auto-detect
+      // the end of each interviewer utterance.
       // Stop any existing capture
       await invoke<string>("stop_system_audio_capture");
 
@@ -597,11 +582,12 @@ export function useSystemAudio() {
 
       // Start capture with VAD config
       await invoke<string>("start_system_audio_capture", {
-        vadConfig: vadConfig,
+        vadConfig: { ...vadConfig, enabled: true },
         deviceId: deviceId,
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
+      setCapturing(false);
       setError(errorMessage);
       setIsPopoverOpen(true);
     }
@@ -684,7 +670,6 @@ export function useSystemAudio() {
 
   useEffect(() => {
     const shouldOpenPopover =
-      capturing ||
       setupRequired ||
       isAIProcessing ||
       !!lastAIResponse ||
@@ -708,7 +693,7 @@ export function useSystemAudio() {
         await startCapture();
       }
     });
-  }, [startCapture, stopCapture]);
+  }, [capturing, startCapture, stopCapture]);
 
   useEffect(() => {
     return () => {

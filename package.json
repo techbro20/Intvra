@@ -1,9 +1,17 @@
 {
-  "name": "phantom",
+  "name": "pruvoai",
   "private": true,
   "version": "0.1.8",
-  "description": "Phantom - transparent AI overlay for Windows.",
-  "author": "Phantom",
+  "description": "PruvoAI - real-time AI interview assistant overlay for Windows.",
+  "author": "techbro20 <victor.immoh@gmail.com>",
+  "homepage": "https://github.com/techbro20/PruvoAI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/techbro20/PruvoAI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/techbro20/PruvoAI/issues"
+  },
   "license": "GPL-3.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -32,6 +40,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@ricky0123/vad-react": "^0.0.36",
+    "@ricky0123/vad-web": "^0.0.30",
     "@tailwindcss/vite": "^4.1.12",
     "@tesseract.js-data/eng": "^1.0.0",
     "class-variance-authority": "^0.7.1",
@@ -71,8 +80,9 @@
     "wait-on": "^9.0.3"
   },
   "build": {
-    "appId": "com.local.phantom",
-    "productName": "Phantom",
+    "appId": "com.techbro20.pruvoai",
+    "productName": "PruvoAI",
+    "copyright": "Copyright (C) 2026 techbro20",
     "directories": {
       "output": "release"
     },
@@ -123,8 +133,8 @@
       "gatekeeperAssess": false,
       "notarize": false,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Phantom uses the microphone for voice input and transcription.",
-        "NSScreenCaptureUsageDescription": "Phantom captures screenshots so you can ask AI questions about screen content."
+        "NSMicrophoneUsageDescription": "PruvoAI uses the microphone for voice input and transcription.",
+        "NSScreenCaptureUsageDescription": "PruvoAI captures screenshots so you can ask AI questions about screen content."
       },
       "target": [
         "dmg",

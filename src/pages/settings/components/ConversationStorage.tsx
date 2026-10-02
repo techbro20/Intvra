@@ -54,7 +54,7 @@ export const ConversationStorage = () => {
     <div id="conversation-storage" className="space-y-3">
       <Header
         title="Conversation Storage"
-        description="Choose where Phantom stores the local SQLite conversation database."
+        description="Choose where PruvoAI stores the local SQLite conversation database."
         isMainTitle
       />
 

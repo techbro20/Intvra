@@ -20,6 +20,26 @@ const { spawn } = require("node:child_process");
 const { Blob } = require("node:buffer");
 const initSqlJs = require("sql.js");
 
+// Must run before app "ready": userData decides where settings, saved keys,
+// and the chat database live. Older installs used the "Phantom" folder.
+const USER_DATA_DIR = path.join(app.getPath("appData"), "PruvoAI");
+
+function migrateLegacyUserData() {
+  if (fs.existsSync(USER_DATA_DIR)) return;
+  const legacyDir = ["Phantom", "phantom"]
+    .map((name) => path.join(app.getPath("appData"), name))
+    .find((dir) => fs.existsSync(dir));
+  if (!legacyDir) return;
+  try {
+    fs.cpSync(legacyDir, USER_DATA_DIR, { recursive: true });
+  } catch (error) {
+    console.error("Failed to migrate legacy user data:", error);
+  }
+}
+
+migrateLegacyUserData();
+app.setPath("userData", USER_DATA_DIR);
+
 const DEV_URL = process.env.PHANTOM_DEV_URL || "http://127.0.0.1:1420";
 const TOP_OFFSET = 54;
 const MAIN_WINDOW_WIDTH = 560;
@@ -186,7 +206,7 @@ async function openScreenRecordingSettings() {
 function getScreenCaptureError() {
   if (process.platform === "darwin" && !hasScreenRecordingPermission()) {
     return new Error(
-      "Screen Recording permission is required. Enable Phantom/Electron in System Settings > Privacy & Security > Screen & System Audio Recording, then restart the app."
+      "Screen Recording permission is required. Enable PruvoAI/Electron in System Settings > Privacy & Security > Screen & System Audio Recording, then restart the app."
     );
   }
   return new Error("Screen capture returned an empty image");
@@ -654,7 +674,7 @@ function showMainWindowAndReassert(options = {}) {
 function createMainWindow() {
   const metrics = getOverlayMetrics();
   mainWindow = createBaseWindow("main", {
-    title: "Phantom - AI Assistant",
+    title: "PruvoAI - AI Assistant",
     width: metrics.width,
     height: metrics.collapsedHeight,
     frame: false,
@@ -698,7 +718,7 @@ function createDashboardWindow() {
     return dashboardWindow;
   }
   dashboardWindow = createBaseWindow("dashboard", {
-    title: "Phantom - Dashboard",
+    title: "PruvoAI - Dashboard",
     width: 1100,
     height: 760,
     minWidth: 800,
@@ -732,7 +752,7 @@ function createResponseWindow() {
   }
 
   responseWindow = createBaseWindow("response", {
-    title: "Phantom - Response",
+    title: "PruvoAI - Response",
     ...getResponseWindowBounds(),
     frame: false,
     transparent: true,
@@ -854,7 +874,7 @@ function setupTray() {
   if (!trayIcon) return undefined;
 
   tray = new Tray(trayIcon);
-  tray.setToolTip("Phantom");
+  tray.setToolTip("PruvoAI");
   tray.on("click", () => {
     if (!mainWindow || mainWindow.isDestroyed()) {
       createMainWindow();
@@ -865,7 +885,7 @@ function setupTray() {
   const rebuildTrayMenu = () => {
     const menu = Menu.buildFromTemplate([
       {
-        label: "Show Phantom",
+        label: "Show PruvoAI",
         click: () => {
           if (!mainWindow || mainWindow.isDestroyed()) {
             createMainWindow();
@@ -874,7 +894,7 @@ function setupTray() {
         },
       },
       {
-        label: "Hide Phantom",
+        label: "Hide PruvoAI",
         click: () => hidePhantomWindows(),
       },
       { type: "separator" },
@@ -891,7 +911,7 @@ function setupTray() {
       },
       { type: "separator" },
       {
-        label: "Exit Phantom",
+        label: "Exit PruvoAI",
         click: () => quitPhantom(),
       },
     ]);
@@ -1377,7 +1397,7 @@ async function extractAccessibilityText(args = {}) {
       durationMs: 0,
       truncated: false,
       unsupportedPlatform: true,
-      error: "Phantom Ultra Instinct Mode is only available on Windows.",
+      error: "PruvoAI Ultra Instinct Mode is only available on Windows.",
     };
   }
 
@@ -1388,7 +1408,7 @@ async function extractAccessibilityText(args = {}) {
   const config = {
     maxChars,
     excludeProcessId: process.pid,
-    appName: app.getName() || "Phantom",
+    appName: app.getName() || "PruvoAI",
   };
 
   const scriptPath = getAccessibilityScriptPath();
@@ -1483,7 +1503,7 @@ function getConversationStorageInfo() {
 
 function switchConversationStorageDir(folderPath) {
   const previousPath = getDatabasePath();
-  persistDb();
+  persistDbSync();
 
   const settings = readAppSettings();
   if (folderPath) {
@@ -1549,8 +1569,66 @@ async function getDb() {
   return sqlDb;
 }
 
+const DB_PERSIST_DELAY_MS = 750;
+let dbPersistTimer = null;
+let dbPersistDirty = false;
+let dbPersistGeneration = 0;
+let dbPersistInFlight = null;
+
+// sql.js keeps the whole database in memory, so every save rewrites the full
+// file. Writes are coalesced and done asynchronously to keep the main process
+// (and therefore every window) responsive.
 function persistDb() {
   if (!sqlDb) return;
+  dbPersistDirty = true;
+  if (dbPersistTimer) return;
+  dbPersistTimer = setTimeout(() => {
+    dbPersistTimer = null;
+    void flushDbAsync();
+  }, DB_PERSIST_DELAY_MS);
+}
+
+async function flushDbAsync() {
+  if (dbPersistInFlight) {
+    await dbPersistInFlight;
+  }
+  if (!sqlDb || !dbPersistDirty) return;
+
+  dbPersistDirty = false;
+  const generation = ++dbPersistGeneration;
+  const data = Buffer.from(sqlDb.export());
+  const dbPath = getDatabasePath();
+  const tempPath = `${dbPath}.tmp`;
+
+  dbPersistInFlight = (async () => {
+    await fs.promises.mkdir(path.dirname(dbPath), { recursive: true });
+    await fs.promises.writeFile(tempPath, data);
+    if (generation !== dbPersistGeneration) return;
+    try {
+      await fs.promises.rename(tempPath, dbPath);
+    } catch {
+      await fs.promises.writeFile(dbPath, data);
+    }
+  })()
+    .catch((error) => {
+      dbPersistDirty = true;
+      console.error("Failed to persist database:", error);
+    })
+    .finally(() => {
+      dbPersistInFlight = null;
+    });
+
+  await dbPersistInFlight;
+}
+
+function persistDbSync() {
+  if (dbPersistTimer) {
+    clearTimeout(dbPersistTimer);
+    dbPersistTimer = null;
+  }
+  if (!sqlDb) return;
+  dbPersistGeneration += 1;
+  dbPersistDirty = false;
   const dbPath = getDatabasePath();
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   fs.writeFileSync(dbPath, Buffer.from(sqlDb.export()));
@@ -1681,7 +1759,7 @@ async function startSelectionCapture() {
     });
     const label = `capture-overlay-${index}`;
     const win = createBaseWindow(label, {
-      title: "Phantom Screen Capture",
+      title: "PruvoAI Screen Capture",
       x: display.bounds.x,
       y: display.bounds.y,
       width: display.bounds.width,
@@ -1842,7 +1920,7 @@ async function handleInvoke(command, args = {}) {
     case "mask_license_key_cmd":
       return maskKey(args.licenseKey || args.license_key || "");
     case "get_checkout_url":
-      return { success: false, checkout_url: null, error: "Payment is disabled in Phantom." };
+      return { success: false, checkout_url: null, error: "Payment is disabled in PruvoAI." };
     case "secure_storage_save": {
       const data = readSecureStorage();
       for (const item of args.items || []) {
@@ -1891,7 +1969,7 @@ async function handleInvoke(command, args = {}) {
     case "create_system_prompt":
       return {
         prompt_name: "Generated Prompt",
-        system_prompt: `You are Phantom. Follow this user intent carefully: ${args.userPrompt || args.user_prompt || ""}`,
+        system_prompt: `You are PruvoAI. Follow this user intent carefully: ${args.userPrompt || args.user_prompt || ""}`,
       };
     case "get_activity":
       return { success: true, data: [], total_tokens_used: 0 };
@@ -1986,12 +2064,12 @@ async function handleInvoke(command, args = {}) {
       emitToAll(command.replace("start_system_audio_capture", "capture-started").replace("stop_system_audio_capture", "capture-stopped"), {});
       return null;
     default:
-      throw new Error(`Unknown Phantom command: ${command}`);
+      throw new Error(`Unknown PruvoAI command: ${command}`);
   }
 }
 
 app.whenReady().then(async () => {
-  app.setName("Phantom");
+  app.setName("PruvoAI");
   alwaysOnTopEnabled = readAlwaysOnTopSetting();
 
   session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
@@ -2057,7 +2135,7 @@ app.on("before-quit", () => {
     zOrderReassertTimer = null;
   }
   globalShortcut.unregisterAll();
-  persistDb();
+  persistDbSync();
   if (tray && !tray.isDestroyed()) {
     tray.destroy();
   }

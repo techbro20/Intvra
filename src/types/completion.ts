@@ -23,6 +23,14 @@ export interface ChatConversation {
   updatedAt: number;
 }
 
+export interface ChatConversationSummary {
+  id: string;
+  title: string;
+  messageCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface CompletionState {
   input: string;
   response: string;
