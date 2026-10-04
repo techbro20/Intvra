@@ -836,7 +836,7 @@ export const Providers = ({
         <div className="flex flex-col gap-3 border-b border-white/10 pb-4 lg:flex-row lg:items-end lg:justify-between">
           <Header
             title="Providers"
-            description="Connect and manage the AI models you want to use with PruvoAI."
+            description="Connect and manage the AI models you want to use with Ai.Intvra."
             titleClassName="text-2xl"
             descriptionClassName="text-sm"
           />
@@ -970,7 +970,7 @@ export const Providers = ({
                     Failover Order
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    PruvoAI tries every enabled model for this key before
+                    Ai.Intvra tries every enabled model for this key before
                     switching to the next API key.
                   </p>
                 </div>
@@ -1276,7 +1276,7 @@ export const Providers = ({
                       })
                     ) : (
                       <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-muted-foreground">
-                        Add a model to this key. PruvoAI will try models here
+                        Add a model to this key. Ai.Intvra will try models here
                         before it tries the next API key.
                       </p>
                     )}

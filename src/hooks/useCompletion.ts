@@ -1315,7 +1315,7 @@ export const useCompletion = () => {
       response: "",
       error: null,
       notice: config.ultraInstinctEnabled
-        ? "PruvoAI Ultra Instinct Mode is reading active-window text..."
+        ? "Ai.Intvra Ultra Instinct Mode is reading active-window text..."
         : config.enabled
         ? "Capturing screenshot..."
         : "Select an area to capture. The response panel will update after capture.",
@@ -1356,7 +1356,7 @@ export const useCompletion = () => {
             setState((prev) => ({
               ...prev,
               error:
-                "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen & System Audio Recording. If you don't see PruvoAI in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
+                "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen & System Audio Recording. If you don't see Ai.Intvra in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
               notice: null,
             }));
             setIsScreenshotLoading(false);

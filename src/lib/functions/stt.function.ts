@@ -10,7 +10,7 @@ import { TYPE_PROVIDER } from "@/types";
 import curl2Json from "@bany/curl-to-json";
 import { shouldUseLocalAPI } from "./local-api";
 
-// Hosted STT function retained for compatibility. It is disabled in PruvoAI.
+// Hosted STT function retained for compatibility. It is disabled in Ai.Intvra.
 async function fetchLocalSTT(audio: File | Blob): Promise<string> {
   try {
     // Convert audio to base64
@@ -32,7 +32,7 @@ async function fetchLocalSTT(audio: File | Blob): Promise<string> {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return `PruvoAI hosted STT error: ${errorMessage}`;
+    return `Ai.Intvra hosted STT error: ${errorMessage}`;
   }
 }
 

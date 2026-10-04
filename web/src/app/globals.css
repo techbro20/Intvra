@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #050b1e;
+  --color-panel: #0a1633;
+  --color-panel-2: #0d1d42;
+  --color-line: #1a2b55;
+  --color-electric: #1e6bff;
+  --color-cyan: #38d6ff;
+  --color-text: #eaf2ff;
+  --color-muted: #8fa3c7;
+
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--color-ink);
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(56, 214, 255, 0.3);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, var(--color-electric), var(--color-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-border {
+  position: relative;
+  border: 1px solid rgba(56, 214, 255, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(30, 107, 255, 0.08) inset,
+    0 20px 60px -20px rgba(30, 107, 255, 0.35);
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, var(--color-electric), #2f8bff 55%, var(--color-cyan));
+  box-shadow: 0 10px 30px -8px rgba(30, 107, 255, 0.7);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 14px 40px -8px rgba(56, 214, 255, 0.7);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(56, 214, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 214, 255, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--color-cyan);
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+.pulse-ring {
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details[open] .faq-icon {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-float,
+  .pulse-ring,
+  .caret::after {
+    animation: none;
+  }
+}

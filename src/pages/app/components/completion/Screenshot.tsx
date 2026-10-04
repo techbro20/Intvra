@@ -19,7 +19,7 @@ export const Screenshot = ({
   const { supportsImages } = useApp();
   const isUltraInstinct = Boolean(screenshotConfiguration.ultraInstinctEnabled);
   const captureMode = isUltraInstinct
-    ? "PruvoAI Ultra Instinct"
+    ? "Ai.Intvra Ultra Instinct"
     : screenshotConfiguration.enabled
     ? "Screenshot"
     : "Selection";
@@ -36,7 +36,7 @@ export const Screenshot = ({
       className="phantom-icon-button"
       title={
         isUltraInstinct
-          ? `PruvoAI Ultra Instinct Mode (${processingMode}) - reads active-window text without taking a screenshot`
+          ? `Ai.Intvra Ultra Instinct Mode (${processingMode}) - reads active-window text without taking a screenshot`
           : !supportsImages
           ? `${captureMode} mode (${processingMode}) - current provider may not support image input`
           : `${captureMode} mode (${processingMode}) - ${attachedFiles.length}/${MAX_FILES} files`

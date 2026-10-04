@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="build/icon.png" alt="PruvoAI logo" width="128" />
+<img src="build/icon.png" alt="Ai.Intvra logo" width="128" />
 
-# PruvoAI
+# Ai.Intvra
 
 **Your invisible personal assistant for Windows.**
 A local AI overlay that gives you real-time answers during meetings, interviews, and coding sessions without switching windows or paying a subscription.
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?logo=windows)](https://github.com/techbro20/PruvoAI)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?logo=windows)](https://github.com/techbro20/Intvra)
 [![Built with Electron](https://img.shields.io/badge/Electron-39-47848f?logo=electron)](https://electronjs.org)
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
 [![No Telemetry](https://img.shields.io/badge/Telemetry-None-brightgreen)](README.md)
@@ -22,9 +22,9 @@ A local AI overlay that gives you real-time answers during meetings, interviews,
 
 ---
 
-## What is PruvoAI?
+## What is Ai.Intvra?
 
-PruvoAI is a **transparent AI assistant overlay** that floats above every window on your screen. It is built for personal, local-first AI help during live situations while keeping provider keys and conversation data under your control.
+Ai.Intvra is a **transparent AI assistant overlay** that floats above every window on your screen. It is built for personal, local-first AI help during live situations while keeping provider keys and conversation data under your control.
 
 **Use it for:**
 - **Job interviews** — get instant answers to technical questions while screen-sharing
@@ -76,8 +76,8 @@ PruvoAI is a **transparent AI assistant overlay** that floats above every window
 
 ```powershell
 # Clone the repo
-git clone https://github.com/techbro20/PruvoAI.git
-cd PruvoAI
+git clone https://github.com/techbro20/Intvra.git
+cd Intvra
 
 # Install dependencies
 npm install
@@ -104,7 +104,7 @@ npm run dist:win
 npm run dist:mac
 ```
 
-macOS builds are unsigned by default because PruvoAI is personal local software. GitHub Actions does not require Apple signing secrets for normal personal releases.
+macOS builds are unsigned by default because Ai.Intvra is personal local software. GitHub Actions does not require Apple signing secrets for normal personal releases.
 
 If you later want a Gatekeeper-safe macOS release that opens normally after browser download on any Mac, add these optional GitHub repository secrets:
 
@@ -119,7 +119,7 @@ APPLE_API_ISSUER
 `CSC_LINK` is your exported Developer ID Application certificate as a base64-encoded `.p12`. The Apple API key values come from App Store Connect. Without these optional secrets, the macOS artifact stays unsigned. If macOS blocks a browser-downloaded unsigned app, remove quarantine once:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/PruvoAI.app
+xattr -dr com.apple.quarantine /Applications/Ai.Intvra.app
 ```
 
 Output lands in `release/`. Windows builds produce an NSIS installer and a portable `.exe`; macOS builds produce `.dmg` and `.zip` artifacts.
@@ -128,7 +128,7 @@ Output lands in `release/`. Windows builds produce an NSIS installer and a porta
 
 ## Setting Up Your First AI Provider
 
-When PruvoAI opens for the first time, open the **Dashboard** (`Ctrl+Shift+D`) and go to **Providers**.
+When Ai.Intvra opens for the first time, open the **Dashboard** (`Ctrl+Shift+D`) and go to **Providers**.
 
 ### Option A — Built-in Providers (Recommended)
 
@@ -158,11 +158,11 @@ Choose from 10 pre-configured providers. All you need is an API key.
 
 ### Option B — Custom Provider (Advanced)
 
-PruvoAI uses **curl templates** to support any HTTP-based AI API. This means if a service has a REST API, you can connect it.
+Ai.Intvra uses **curl templates** to support any HTTP-based AI API. This means if a service has a REST API, you can connect it.
 
 #### How Custom Providers Work
 
-A custom provider is a curl command with placeholder variables that PruvoAI fills in at request time:
+A custom provider is a curl command with placeholder variables that Ai.Intvra fills in at request time:
 
 | Variable | Replaced with |
 |----------|--------------|
@@ -227,11 +227,11 @@ curl https://my-api.example.com/v1/chat/completions \
 
 ## Speech-to-Text Setup
 
-PruvoAI supports both **microphone input** and **Windows system audio loopback** (transcribing audio playing on your PC).
+Ai.Intvra supports both **microphone input** and **Windows system audio loopback** (transcribing audio playing on your PC).
 
 ### Built-in STT Providers
 
-Each provider needs your own API key. After you enter the key, PruvoAI lists the speech models that key can use (where the provider supports it).
+Each provider needs your own API key. After you enter the key, Ai.Intvra lists the speech models that key can use (where the provider supports it).
 
 | Provider | Model to use | Notes |
 |----------|--------------|-------|
@@ -257,14 +257,14 @@ Same curl-template approach as AI providers. Your template receives:
 
 ### Microphone Input
 
-Click the mic icon on the overlay bar. PruvoAI listens, detects when you stop speaking, transcribes that clip, and sends it to the AI. Click again to stop.
+Click the mic icon on the overlay bar. Ai.Intvra listens, detects when you stop speaking, transcribes that clip, and sends it to the AI. Click again to stop.
 
 ### System Audio Capture (Windows)
 
-PruvoAI can transcribe audio coming **out** of your speakers — useful for interviews, meetings, or videos.
+Ai.Intvra can transcribe audio coming **out** of your speakers — useful for interviews, meetings, or videos.
 
 1. Click the system-audio button on the overlay bar
-2. PruvoAI detects each spoken segment, transcribes it, and sends it to the AI as it happens
+2. Ai.Intvra detects each spoken segment, transcribes it, and sends it to the AI as it happens
 3. Use the audio visualizer in the overlay bar to confirm capture is active
 
 Choose your microphone on the Dashboard → **Audio** page.
@@ -273,7 +273,7 @@ Choose your microphone on the Dashboard → **Audio** page.
 
 ## Keyboard Shortcuts
 
-All shortcuts are **global** — they work even when PruvoAI's window isn't focused.
+All shortcuts are **global** — they work even when Ai.Intvra's window isn't focused.
 
 | Shortcut | Action |
 |----------|--------|
@@ -314,7 +314,7 @@ The dashboard (`Ctrl+Shift+D`) is your control center:
 3. The capture is automatically attached to your next message
 4. Type your question and press `Enter` — the image travels with your prompt
 
-PruvoAI encodes the screenshot as base64 and includes it in the API request, so models with vision support (GPT-4o, Claude 3, Gemini 1.5, etc.) can analyze it directly.
+Ai.Intvra encodes the screenshot as base64 and includes it in the API request, so models with vision support (GPT-4o, Claude 3, Gemini 1.5, etc.) can analyze it directly.
 
 ---
 
@@ -373,7 +373,7 @@ phantom/
 
 ## Contributing
 
-PruvoAI is GPL-3.0 open source. PRs, bug reports, and feature requests welcome.
+Ai.Intvra is GPL-3.0 open source. PRs, bug reports, and feature requests welcome.
 
 ```powershell
 # Run in dev mode
@@ -388,9 +388,10 @@ npm run build
 
 ---
 
-## Repository
+## Links
 
-[github.com/techbro20/PruvoAI](https://github.com/techbro20/PruvoAI)
+- Website: [ai.intvra.com](https://ai.intvra.com)
+- Source code: [github.com/techbro20/Intvra](https://github.com/techbro20/Intvra)
 
 Maintained by [techbro20](https://github.com/techbro20) — victor.immoh@gmail.com
 

@@ -1,5 +1,5 @@
 /**
- * PruvoAI is a local personal build. Analytics calls are intentionally no-ops.
+ * Ai.Intvra is a local personal build. Analytics calls are intentionally no-ops.
  */
 export const ANALYTICS_EVENTS = {
   APP_STARTED: "app_started",

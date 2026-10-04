@@ -1,16 +1,16 @@
 {
-  "name": "pruvoai",
+  "name": "ai-intvra",
   "private": true,
   "version": "0.1.8",
-  "description": "PruvoAI - real-time AI interview assistant overlay for Windows.",
+  "description": "Ai.Intvra - real-time AI interview assistant overlay for Windows.",
   "author": "techbro20 <victor.immoh@gmail.com>",
-  "homepage": "https://github.com/techbro20/PruvoAI",
+  "homepage": "https://ai.intvra.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/techbro20/PruvoAI.git"
+    "url": "https://github.com/techbro20/Intvra.git"
   },
   "bugs": {
-    "url": "https://github.com/techbro20/PruvoAI/issues"
+    "url": "https://github.com/techbro20/Intvra/issues"
   },
   "license": "GPL-3.0",
   "type": "module",
@@ -80,8 +80,9 @@
     "wait-on": "^9.0.3"
   },
   "build": {
-    "appId": "com.techbro20.pruvoai",
-    "productName": "PruvoAI",
+    "appId": "com.intvra.ai",
+    "productName": "Ai.Intvra",
+    "executableName": "AiIntvra",
     "copyright": "Copyright (C) 2026 techbro20",
     "directories": {
       "output": "release"
@@ -133,8 +134,8 @@
       "gatekeeperAssess": false,
       "notarize": false,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "PruvoAI uses the microphone for voice input and transcription.",
-        "NSScreenCaptureUsageDescription": "PruvoAI captures screenshots so you can ask AI questions about screen content."
+        "NSMicrophoneUsageDescription": "Ai.Intvra uses the microphone for voice input and transcription.",
+        "NSScreenCaptureUsageDescription": "Ai.Intvra captures screenshots so you can ask AI questions about screen content."
       },
       "target": [
         "dmg",

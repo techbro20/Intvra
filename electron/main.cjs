@@ -21,12 +21,13 @@ const { Blob } = require("node:buffer");
 const initSqlJs = require("sql.js");
 
 // Must run before app "ready": userData decides where settings, saved keys,
-// and the chat database live. Older installs used the "Phantom" folder.
-const USER_DATA_DIR = path.join(app.getPath("appData"), "PruvoAI");
+// and the chat database live. Older installs used earlier product folder names.
+const USER_DATA_DIR = path.join(app.getPath("appData"), "Ai.Intvra");
+const LEGACY_USER_DATA_DIR_NAMES = ["PruvoAI", "Phantom", "phantom"];
 
 function migrateLegacyUserData() {
   if (fs.existsSync(USER_DATA_DIR)) return;
-  const legacyDir = ["Phantom", "phantom"]
+  const legacyDir = LEGACY_USER_DATA_DIR_NAMES
     .map((name) => path.join(app.getPath("appData"), name))
     .find((dir) => fs.existsSync(dir));
   if (!legacyDir) return;
@@ -60,6 +61,7 @@ const DEFAULT_DISPLAY_SETTINGS = {
 let mainWindow;
 let dashboardWindow;
 let responseWindow;
+let responseWindowLoadPending = false;
 let tray;
 let lastResponseWindowState = null;
 let alwaysOnTopEnabled = false;
@@ -206,7 +208,7 @@ async function openScreenRecordingSettings() {
 function getScreenCaptureError() {
   if (process.platform === "darwin" && !hasScreenRecordingPermission()) {
     return new Error(
-      "Screen Recording permission is required. Enable PruvoAI/Electron in System Settings > Privacy & Security > Screen & System Audio Recording, then restart the app."
+      "Screen Recording permission is required. Enable Ai.Intvra/Electron in System Settings > Privacy & Security > Screen & System Audio Recording, then restart the app."
     );
   }
   return new Error("Screen capture returned an empty image");
@@ -674,7 +676,7 @@ function showMainWindowAndReassert(options = {}) {
 function createMainWindow() {
   const metrics = getOverlayMetrics();
   mainWindow = createBaseWindow("main", {
-    title: "PruvoAI - AI Assistant",
+    title: "Ai.Intvra - AI Assistant",
     width: metrics.width,
     height: metrics.collapsedHeight,
     frame: false,
@@ -718,7 +720,7 @@ function createDashboardWindow() {
     return dashboardWindow;
   }
   dashboardWindow = createBaseWindow("dashboard", {
-    title: "PruvoAI - Dashboard",
+    title: "Ai.Intvra - Dashboard",
     width: 1100,
     height: 760,
     minWidth: 800,
@@ -752,7 +754,7 @@ function createResponseWindow() {
   }
 
   responseWindow = createBaseWindow("response", {
-    title: "PruvoAI - Response",
+    title: "Ai.Intvra - Response",
     ...getResponseWindowBounds(),
     frame: false,
     transparent: true,
@@ -769,6 +771,7 @@ function createResponseWindow() {
   applyOverlayZOrder(responseWindow, true, { forceTop: true });
   responseWindow.on("closed", () => {
     responseWindow = null;
+    responseWindowLoadPending = false;
   });
   responseWindow.on("show", () => scheduleZOrderReassertion());
   responseWindow.on("blur", () => {
@@ -800,7 +803,13 @@ function updateResponseWindow(state) {
     sendToWindow(win, "response-window-state", lastResponseWindowState);
 
   if (win.webContents.isLoading()) {
-    win.webContents.once("did-finish-load", sendState);
+    if (!responseWindowLoadPending) {
+      responseWindowLoadPending = true;
+      win.webContents.once("did-finish-load", () => {
+        responseWindowLoadPending = false;
+        sendState();
+      });
+    }
   } else {
     sendState();
   }
@@ -874,7 +883,7 @@ function setupTray() {
   if (!trayIcon) return undefined;
 
   tray = new Tray(trayIcon);
-  tray.setToolTip("PruvoAI");
+  tray.setToolTip("Ai.Intvra");
   tray.on("click", () => {
     if (!mainWindow || mainWindow.isDestroyed()) {
       createMainWindow();
@@ -885,7 +894,7 @@ function setupTray() {
   const rebuildTrayMenu = () => {
     const menu = Menu.buildFromTemplate([
       {
-        label: "Show PruvoAI",
+        label: "Show Ai.Intvra",
         click: () => {
           if (!mainWindow || mainWindow.isDestroyed()) {
             createMainWindow();
@@ -894,7 +903,7 @@ function setupTray() {
         },
       },
       {
-        label: "Hide PruvoAI",
+        label: "Hide Ai.Intvra",
         click: () => hidePhantomWindows(),
       },
       { type: "separator" },
@@ -911,7 +920,7 @@ function setupTray() {
       },
       { type: "separator" },
       {
-        label: "Exit PruvoAI",
+        label: "Exit Ai.Intvra",
         click: () => quitPhantom(),
       },
     ]);
@@ -1397,7 +1406,7 @@ async function extractAccessibilityText(args = {}) {
       durationMs: 0,
       truncated: false,
       unsupportedPlatform: true,
-      error: "PruvoAI Ultra Instinct Mode is only available on Windows.",
+      error: "Ai.Intvra Ultra Instinct Mode is only available on Windows.",
     };
   }
 
@@ -1408,7 +1417,7 @@ async function extractAccessibilityText(args = {}) {
   const config = {
     maxChars,
     excludeProcessId: process.pid,
-    appName: app.getName() || "PruvoAI",
+    appName: app.getName() || "Ai.Intvra",
   };
 
   const scriptPath = getAccessibilityScriptPath();
@@ -1759,7 +1768,7 @@ async function startSelectionCapture() {
     });
     const label = `capture-overlay-${index}`;
     const win = createBaseWindow(label, {
-      title: "PruvoAI Screen Capture",
+      title: "Ai.Intvra Screen Capture",
       x: display.bounds.x,
       y: display.bounds.y,
       width: display.bounds.width,
@@ -1920,7 +1929,7 @@ async function handleInvoke(command, args = {}) {
     case "mask_license_key_cmd":
       return maskKey(args.licenseKey || args.license_key || "");
     case "get_checkout_url":
-      return { success: false, checkout_url: null, error: "Payment is disabled in PruvoAI." };
+      return { success: false, checkout_url: null, error: "Payment is disabled in Ai.Intvra." };
     case "secure_storage_save": {
       const data = readSecureStorage();
       for (const item of args.items || []) {
@@ -1969,7 +1978,7 @@ async function handleInvoke(command, args = {}) {
     case "create_system_prompt":
       return {
         prompt_name: "Generated Prompt",
-        system_prompt: `You are PruvoAI. Follow this user intent carefully: ${args.userPrompt || args.user_prompt || ""}`,
+        system_prompt: `You are Ai.Intvra. Follow this user intent carefully: ${args.userPrompt || args.user_prompt || ""}`,
       };
     case "get_activity":
       return { success: true, data: [], total_tokens_used: 0 };
@@ -2064,12 +2073,12 @@ async function handleInvoke(command, args = {}) {
       emitToAll(command.replace("start_system_audio_capture", "capture-started").replace("stop_system_audio_capture", "capture-stopped"), {});
       return null;
     default:
-      throw new Error(`Unknown PruvoAI command: ${command}`);
+      throw new Error(`Unknown Ai.Intvra command: ${command}`);
   }
 }
 
 app.whenReady().then(async () => {
-  app.setName("PruvoAI");
+  app.setName("Ai.Intvra");
   alwaysOnTopEnabled = readAlwaysOnTopSetting();
 
   session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {

@@ -92,7 +92,7 @@ export const useMenuItems = () => {
     {
       title: "GitHub",
       icon: GithubIcon,
-      link: "https://github.com/debajyoti2050/phantom",
+      link: "https://github.com/techbro20/Intvra",
     },
   ];
 

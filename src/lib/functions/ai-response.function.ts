@@ -391,7 +391,7 @@ function buildEnhancedSystemPrompt(baseSystemPrompt?: string): string {
   return prompts.join(" ");
 }
 
-// Hosted AI streaming function retained for compatibility. It is disabled in PruvoAI.
+// Hosted AI streaming function retained for compatibility. It is disabled in Ai.Intvra.
 async function* fetchLocalAIResponse(params: {
   systemPrompt?: string;
   userMessage: string;
@@ -505,7 +505,7 @@ async function* fetchLocalAIResponse(params: {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    yield `PruvoAI hosted API error: ${errorMessage}`;
+    yield `Ai.Intvra hosted API error: ${errorMessage}`;
   }
 }
 
@@ -927,7 +927,7 @@ export async function* fetchAIResponse(params: {
         getByPath(json, provider?.responseContentPath || "") || "";
       yield (
         content ||
-        "The provider returned a response, but PruvoAI could not extract any text. Check the response content path for this provider."
+        "The provider returned a response, but Ai.Intvra could not extract any text. Check the response content path for this provider."
       );
       return;
     }
@@ -1016,7 +1016,7 @@ export async function* fetchAIResponse(params: {
     }
 
     if (!yieldedContent && !signal?.aborted) {
-      yield "The provider returned a streaming response, but PruvoAI could not extract any text. Check the response content path or turn off streaming for this provider.";
+      yield "The provider returned a streaming response, but Ai.Intvra could not extract any text. Check the response content path or turn off streaming for this provider.";
     }
   } catch (error) {
     throw new Error(

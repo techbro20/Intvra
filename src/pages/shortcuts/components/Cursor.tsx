@@ -23,7 +23,7 @@ export const CursorSelection = ({ className }: CursorSelectionProps) => {
     <div id="cursor" className={`space-y-2 ${className}`}>
       <Header
         title="Cursor"
-        description="Control PruvoAI cursor visibility"
+        description="Control Ai.Intvra cursor visibility"
         isMainTitle
         rightSlot={
           <Select

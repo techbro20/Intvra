@@ -153,7 +153,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     safeLocalStorage.setItem(STORAGE_KEYS.SUPPORTS_IMAGES, String(value));
   };
 
-  // PruvoAI is a local-only personal build. The hosted compatibility API is disabled.
+  // Ai.Intvra is a local-only personal build. The hosted compatibility API is disabled.
   const [localApiEnabled, setLocalApiEnabledState] = useState<boolean>(
     false
   );

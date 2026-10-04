@@ -22,12 +22,12 @@ export const Sidebar = () => {
         <div className="phantom-logo-frame">
           <img
             src={phantomLogoUrl}
-            alt="PruvoAI"
+            alt="Ai.Intvra"
             className="phantom-logo-image"
             draggable={false}
           />
         </div>
-        <span className="phantom-logo-wordmark">PruvoAI</span>
+        <span className="phantom-logo-wordmark">Ai.Intvra</span>
       </div>
 
       {/* Navigation */}

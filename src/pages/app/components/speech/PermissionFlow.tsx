@@ -105,7 +105,7 @@ export const PermissionFlow = ({
     requesting: {
       icon: <LoaderIcon className="w-5 h-5 animate-spin" />,
       title: "Waiting for Permission",
-      description: `Enable PruvoAI in System Settings (${checkAttempts}/20)`,
+      description: `Enable Ai.Intvra in System Settings (${checkAttempts}/20)`,
       bgColor: "bg-violet-500/10",
       borderColor: "border-violet-300/20",
       textColor: "text-violet-100",
@@ -165,7 +165,7 @@ export const PermissionFlow = ({
                   <li>Open System Settings</li>
                   <li>Go to Privacy & Security</li>
                   <li>Select Screen & System Audio Recording</li>
-                  <li>Enable PruvoAI</li>
+                  <li>Enable Ai.Intvra</li>
                 </ol>
               )}
             </div>
