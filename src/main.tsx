@@ -6,6 +6,7 @@ import { AppProvider, ThemeProvider } from "./contexts";
 import "./global.css";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import AppRoutes from "./routes";
+import { AuthGate } from "./components/auth/AuthGate";
 
 const currentWindow = getCurrentWindow();
 const windowLabel = currentWindow.label;
@@ -32,7 +33,9 @@ if (windowLabel.startsWith("capture-overlay-")) {
     <React.StrictMode>
       <ThemeProvider>
         <AppProvider>
-          <AppRoutes />
+          <AuthGate>
+            <AppRoutes />
+          </AuthGate>
         </AppProvider>
       </ThemeProvider>
     </React.StrictMode>

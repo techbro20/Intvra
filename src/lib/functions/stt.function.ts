@@ -4,35 +4,40 @@ import {
   blobToBase64,
 } from "./common.function";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { invoke } from "@tauri-apps/api/core";
+import { CloudError, cloudErrorMessage, getAuthState } from "../cloud";
 
 import { TYPE_PROVIDER } from "@/types";
 import curl2Json from "@bany/curl-to-json";
 import { shouldUseLocalAPI } from "./local-api";
 
-// Hosted STT function retained for compatibility. It is disabled in Ai.Intvra.
-async function fetchLocalSTT(audio: File | Blob): Promise<string> {
+// Transcribes through Ai.Intvra Cloud. The main process attaches the session token.
+async function fetchCloudSTT(audio: File | Blob): Promise<string> {
+  const { apiBase } = await getAuthState();
+  const form = new FormData();
+  form.append(
+    "file",
+    new Blob([await audio.arrayBuffer()], { type: audio.type }),
+    getAudioFileName(audio.type)
+  );
+
+  let response: Response;
   try {
-    // Convert audio to base64
-    const audioBase64 = await blobToBase64(audio);
-
-    // Call Tauri command
-    const response = await invoke<{
-      success: boolean;
-      transcription?: string;
-      error?: string;
-    }>("transcribe_audio", {
-      audioBase64,
+    response = await tauriFetch(`${apiBase}/v1/audio/transcriptions`, {
+      method: "POST",
+      body: form,
     });
+  } catch {
+    throw new CloudError("Can't reach Ai.Intvra right now. Check your internet connection.");
+  }
 
-    if (response.success && response.transcription) {
-      return response.transcription;
-    } else {
-      return response.error || "Transcription failed";
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return `Ai.Intvra hosted STT error: ${errorMessage}`;
+  const body = await response.text().catch(() => "");
+  if (!response.ok) {
+    throw new CloudError(cloudErrorMessage(response.status, body), response.status);
+  }
+  try {
+    return String(JSON.parse(body).text || "").trim();
+  } catch {
+    return "";
   }
 }
 
@@ -76,7 +81,7 @@ export async function fetchSTT(params: STTParams): Promise<string> {
     // Check if we should use the hosted compatibility path instead.
     const useLocalAPI = await shouldUseLocalAPI();
     if (useLocalAPI) {
-      return await fetchLocalSTT(audio);
+      return await fetchCloudSTT(audio);
     }
 
     if (!provider) throw new Error("Provider not provided");

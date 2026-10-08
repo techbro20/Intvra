@@ -59,7 +59,7 @@ const features = [
 const faqs = [
   {
     q: "What is a credit?",
-    a: "One credit is one AI answer. Listening and transcribing the interviewer is always free — you only spend a credit when an answer is generated. A typical 30-minute interview uses around 10–20 credits.",
+    a: "On paid plans, one credit is one AI answer. On the free plan each answer uses 2 credits, so your 20 free credits cover 10 answers. Listening and transcribing the interviewer is always free — you only spend credits when an answer is generated. A typical 30-minute interview uses around 10–20 answers.",
   },
   {
     q: "Can the interviewer see Ai.Intvra?",
@@ -140,7 +140,7 @@ export default async function Home() {
                 </a>
               </div>
               <p className="mt-6 text-sm text-muted">
-                <span className="text-text">20 free credits</span> on sign-up · No card required
+                <span className="text-text">10 free answers</span> on sign-up · No card required
               </p>
             </div>
 
@@ -214,7 +214,7 @@ export default async function Home() {
           <SectionHeading
             eyebrow="Pricing"
             title="Simple credits. No surprises."
-            sub="1 credit = 1 AI answer. Listening is always free."
+            sub="1 credit = 1 AI answer on paid plans. Listening is always free."
           />
           <div className="mx-auto max-w-6xl">
             <Pricing downloadUrl={release.downloadUrl} />
@@ -267,7 +267,7 @@ export default async function Home() {
                 Walk into your next interview <span className="text-gradient">ready</span>.
               </h2>
               <p className="mt-4 max-w-xl text-muted">
-                Download Ai.Intvra free and get 20 credits to try it on a real call.
+                Download Ai.Intvra free and get 10 answers to try it on a real call.
               </p>
               <div className="mt-8">
                 <DownloadButton release={release} />

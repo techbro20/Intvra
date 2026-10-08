@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useMenuItems, useVersion } from "@/hooks";
 import phantomLogoUrl from "../../build/icon.png?url";
+import { AccountCard } from "./auth/AccountCard";
 
 export const Sidebar = () => {
   const { version, isLoading } = useVersion();
@@ -57,6 +58,7 @@ export const Sidebar = () => {
       </nav>
 
       <div className="flex flex-col space-y-1 px-3  pb-3">
+        <AccountCard />
         <div className="flex flex-row justify-evenly items-center gap-2 mb-3">
           {footerLinks.map((item, index) => (
             <Button

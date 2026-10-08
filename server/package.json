@@ -1,0 +1,19 @@
+{
+  "name": "ai-intvra-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ai.Intvra backend: accounts, credits and AI proxy.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "dev": "node --watch --env-file-if-exists=.env src/index.js",
+    "admin": "node --env-file-if-exists=.env scripts/admin.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "hono": "^4.7.0"
+  }
+}

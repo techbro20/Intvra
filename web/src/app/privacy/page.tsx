@@ -25,7 +25,10 @@ export default function PrivacyPage() {
       </p>
       <h2>Accounts and billing</h2>
       <p>
-        If you create an account, we store your email address and credit balance. Payments are processed by our payment
+        If you create an account, we store your email address and credit balance. To allow one free trial per computer,
+        the app also sends a one-way hash of your computer&apos;s device ID; it can&apos;t be used to identify you or
+        your hardware. We also keep a one-way hash of the network address used when a free trial is claimed, to limit
+        how many trials one network can receive. Payments are processed by our payment
         provider; we never see or store your card details.
       </p>
       <h2>Analytics</h2>

@@ -14,11 +14,13 @@ export default function TermsPage() {
       <h2>Your account</h2>
       <p>
         You need an account to use Ai.Intvra. You can sign up with Google or email. Keep your login secure — you are
-        responsible for activity on your account. One free trial per person.
+        responsible for activity on your account. One free trial per person and per computer, with a limit on how many trials can be claimed from one network. Temporary or
+        disposable email addresses can't be used to sign up.
       </p>
       <h2>Plans and payments</h2>
       <p>
-        One credit equals one AI-generated answer. Every new account receives 20 free credits, granted once.
+        On paid plans, one credit equals one AI-generated answer. Every new account receives 20 free credits, granted
+        once; on the free plan each answer uses 2 credits, so the trial covers 10 answers.
       </p>
       <p>
         <strong className="text-text">Pay as you go</strong> — $5 for 100 credits. Purchased credits do not expire.

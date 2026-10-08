@@ -19,6 +19,7 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { Blob } = require("node:buffer");
 const initSqlJs = require("sql.js");
+const { createAuth } = require("./auth.cjs");
 
 // Must run before app "ready": userData decides where settings, saved keys,
 // and the chat database live. Older installs used earlier product folder names.
@@ -74,6 +75,7 @@ let secureStorageCache;
 let activeHttpRequests = new Map();
 let ocrWorkerPromise = null;
 let ocrQueue = Promise.resolve();
+let auth;
 const sessionModelCooldowns = new Map();
 const DB_FILE_NAME = "phantom.db";
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
@@ -298,6 +300,7 @@ async function handleHttpFetch(request) {
 
   const init = request.init || {};
   const headers = normalizeHttpHeaders(init.headers);
+  const isApiRequest = Boolean(auth?.authorizeRequest(url, headers));
   const body = buildHttpBody(init.body, headers);
   const controller = new AbortController();
   activeHttpRequests.set(requestId, controller);
@@ -317,6 +320,7 @@ async function handleHttpFetch(request) {
     throw error;
   }
 
+  if (isApiRequest) auth.observeApiResponse(response);
   streamHttpResponse(requestId, response);
 
   return {
@@ -1857,6 +1861,17 @@ async function handleInvoke(command, args = {}) {
   switch (command) {
     case "get_app_version":
       return app.getVersion();
+    case "auth_get_state":
+      return auth.getState({ refresh: args.refresh !== false });
+    case "auth_refresh":
+      return auth.refresh();
+    case "auth_start_login":
+      return auth.startLogin();
+    case "auth_cancel_login":
+      auth.cancelLogin();
+      return auth.getState({ refresh: false });
+    case "auth_logout":
+      return auth.logout();
     case "set_window_height":
       resizeMainWindow(args.height);
       return null;
@@ -2110,9 +2125,22 @@ app.whenReady().then(async () => {
     return null;
   });
 
+  auth = createAuth({
+    app,
+    shell,
+    readSecureStorage,
+    writeSecureStorage,
+    encodeSecret,
+    decodeSecret,
+    emit: emitToAll,
+    onSignedIn: () => showDashboard(),
+  });
+
   createMainWindow();
   createDashboardWindow();
   setupTray();
+  // Signed-out users land on the dashboard's sign-in screen.
+  if (!(await auth.getState({ refresh: false })).user) showDashboard();
   await getDb();
 });
 

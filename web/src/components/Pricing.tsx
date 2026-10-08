@@ -14,7 +14,7 @@ const plans: Plan[] = [
     price: "$0",
     credits: "20 credits",
     blurb: "Try it on a real interview.",
-    features: ["20 AI answers", "Live listening included", "All core features"],
+    features: ["10 AI answers (2 credits each)", "Live listening included", "All core features"],
   },
   {
     name: "Pay as you go",

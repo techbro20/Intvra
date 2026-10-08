@@ -8,10 +8,9 @@ import {
 import { Message, TYPE_PROVIDER } from "@/types";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import curl2Json from "@bany/curl-to-json";
 import { shouldUseLocalAPI } from "./local-api";
-import { CHUNK_POLL_INTERVAL_MS } from "../chat-constants";
+import { CloudError, cloudErrorMessage, getAuthState } from "../cloud";
 import { getResponseSettings, RESPONSE_LENGTHS, LANGUAGES } from "@/lib";
 import { MARKDOWN_FORMATTING_INSTRUCTIONS } from "@/config/constants";
 import {
@@ -391,122 +390,92 @@ function buildEnhancedSystemPrompt(baseSystemPrompt?: string): string {
   return prompts.join(" ");
 }
 
-// Hosted AI streaming function retained for compatibility. It is disabled in Ai.Intvra.
-async function* fetchLocalAIResponse(params: {
+// Streams an answer from Ai.Intvra Cloud. The main process attaches the session token.
+async function* fetchCloudAIResponse(params: {
   systemPrompt?: string;
   userMessage: string;
   imagesBase64?: string[];
   history?: Message[];
   signal?: AbortSignal;
 }): AsyncIterable<string> {
-  try {
-    const {
-      systemPrompt,
-      userMessage,
-      imagesBase64 = [],
-      history = [],
-      signal,
-    } = params;
+  const { systemPrompt, userMessage, imagesBase64 = [], history = [], signal } = params;
+  if (signal?.aborted) return;
 
-    // Check if already aborted before starting
+  const { apiBase } = await getAuthState();
+  const messages = [
+    ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+    ...history.map((msg) => ({ role: msg.role, content: msg.content })),
+    {
+      role: "user",
+      content: [
+        { type: "text", text: userMessage },
+        ...imagesBase64.map((image) => ({
+          type: "image_url",
+          image_url: { url: `data:image/png;base64,${image}` },
+        })),
+      ],
+    },
+  ];
+
+  let response: Response;
+  try {
+    response = await tauriFetch(`${apiBase}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, stream: true }),
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted || (error instanceof Error && error.name === "AbortError")) return;
+    throw new CloudError("Can't reach Ai.Intvra right now. Check your internet connection.");
+  }
+
+  if (!response.ok) {
+    throw new CloudError(
+      cloudErrorMessage(response.status, await response.text().catch(() => "")),
+      response.status
+    );
+  }
+  if (!response.body) throw new CloudError("Ai.Intvra returned an empty response.");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const parseLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) return "";
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") return "";
+    try {
+      return getStreamingContent(JSON.parse(payload), "choices[0].message.content") || "";
+    } catch {
+      return "";
+    }
+  };
+
+  while (true) {
     if (signal?.aborted) {
+      reader.cancel();
       return;
     }
-
-    // Convert history to the expected format
-    let historyString: string | undefined;
-    if (history.length > 0) {
-      // Create a copy before reversing to avoid mutating the original array
-      const formattedHistory = [...history].reverse().map((msg) => ({
-        role: msg.role,
-        content: [{ type: "text", text: msg.content }],
-      }));
-      historyString = JSON.stringify(formattedHistory);
-    }
-
-    // Handle images - can be string or array
-    let imageBase64: any = undefined;
-    if (imagesBase64.length > 0) {
-      imageBase64 = imagesBase64.length === 1 ? imagesBase64[0] : imagesBase64;
-    }
-
-    // Set up streaming event listener
-    let streamComplete = false;
-    const streamChunks: string[] = [];
-
-    const unlisten = await listen("chat_stream_chunk", (event) => {
-      const chunk = event.payload as string;
-      streamChunks.push(chunk);
-    });
-
-    const unlistenComplete = await listen("chat_stream_complete", () => {
-      streamComplete = true;
-    });
-
+    let result;
     try {
-      // Check if aborted before starting invoke
-      if (signal?.aborted) {
-        unlisten();
-        unlistenComplete();
-        return;
-      }
-
-      // Start the streaming request using the new API response endpoint
-      await invoke("chat_stream_response", {
-        userMessage,
-        systemPrompt,
-        imageBase64,
-        history: historyString,
-      });
-
-      // Yield chunks as they come in
-      let lastIndex = 0;
-      while (!streamComplete) {
-        // Check if aborted during streaming
-        if (signal?.aborted) {
-          unlisten();
-          unlistenComplete();
-          return;
-        }
-
-        // Wait a bit for chunks to accumulate
-        await new Promise((resolve) =>
-          setTimeout(resolve, CHUNK_POLL_INTERVAL_MS)
-        );
-
-        // Check again after timeout
-        if (signal?.aborted) {
-          unlisten();
-          unlistenComplete();
-          return;
-        }
-
-        // Yield any new chunks
-        for (let i = lastIndex; i < streamChunks.length; i++) {
-          yield streamChunks[i];
-        }
-        lastIndex = streamChunks.length;
-      }
-
-      // Final abort check before yielding remaining chunks
-      if (signal?.aborted) {
-        unlisten();
-        unlistenComplete();
-        return;
-      }
-
-      // Yield any remaining chunks
-      for (let i = lastIndex; i < streamChunks.length; i++) {
-        yield streamChunks[i];
-      }
-    } finally {
-      unlisten();
-      unlistenComplete();
+      result = await reader.read();
+    } catch (error) {
+      if (signal?.aborted || (error instanceof Error && error.name === "AbortError")) return;
+      throw error;
     }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    yield `Ai.Intvra hosted API error: ${errorMessage}`;
+    if (result.done) break;
+    buffer += decoder.decode(result.value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) {
+      const delta = parseLine(line);
+      if (delta) yield delta;
+    }
   }
+  const trailing = parseLine(buffer);
+  if (trailing) yield trailing;
 }
 
 export async function* fetchAIResponse(params: {
@@ -545,7 +514,7 @@ export async function* fetchAIResponse(params: {
     // Check if we should use the hosted compatibility path instead.
     const useLocalAPI = await shouldUseLocalAPI();
     if (useLocalAPI) {
-      yield* fetchLocalAIResponse({
+      yield* fetchCloudAIResponse({
         systemPrompt: enhancedSystemPrompt,
         userMessage,
         imagesBase64,
@@ -1019,6 +988,7 @@ export async function* fetchAIResponse(params: {
       yield "The provider returned a streaming response, but Ai.Intvra could not extract any text. Check the response content path or turn off streaming for this provider.";
     }
   } catch (error) {
+    if (error instanceof CloudError) throw error;
     throw new Error(
       `Error in fetchAIResponse: ${
         error instanceof Error ? error.message : "Unknown error"
