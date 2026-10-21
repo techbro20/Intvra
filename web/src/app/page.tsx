@@ -79,7 +79,7 @@ const faqs = [
   },
   {
     q: "How do I sign up and pay?",
-    a: "Download the app and create your account — you can sign in with Google or email. You start with 20 free credits. When you need more, upgrade from your account page in the browser: pay as you go, subscribe to Pro, or buy Lifetime. Card payments are supported, with M-Pesa coming soon.",
+    a: "Download the app and create your account — you can sign in with Google or email. You start with 10 free answers. When you need more, click Upgrade in the app (or choose a plan on this page) and pay in your browser with M-Pesa, card, Apple Pay, USDT or USDC on BNB Smart Chain, USDC on Ethereum, or Litecoin. Your plan is linked to your account email, so it's ready as soon as you sign in.",
   },
   {
     q: "Is macOS supported?",
@@ -282,7 +282,7 @@ export default async function Home() {
   );
 }
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export const metadata = {
   alternates: { canonical: site.url },

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "Report a bug or get help with Ai.Intvra.",
 };
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export default async function ContactPage() {
   const release = await getLatestRelease();

@@ -21,7 +21,8 @@ export async function getLatestRelease(): Promise<LatestRelease> {
   try {
     const res = await fetch(site.githubApi, {
       headers: { Accept: "application/vnd.github+json" },
-      next: { revalidate: 3600 },
+      // 5 minutes: new releases show on the download buttons without a long wait.
+      next: { revalidate: 300 },
     });
     if (!res.ok) return fallback;
 
