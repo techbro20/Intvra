@@ -79,6 +79,8 @@ let auth;
 const sessionModelCooldowns = new Map();
 const DB_FILE_NAME = "phantom.db";
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
+let appReady = false;
+let pendingSecondInstance = false;
 
 if (!gotSingleInstanceLock) {
   app.quit();
@@ -678,6 +680,10 @@ function showMainWindowAndReassert(options = {}) {
 }
 
 function createMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return mainWindow;
+  }
+
   const metrics = getOverlayMetrics();
   mainWindow = createBaseWindow("main", {
     title: "Ai.Intvra - AI Assistant",
@@ -717,6 +723,33 @@ function createMainWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+  return mainWindow;
+}
+
+function focusExistingInstance() {
+  if (!appReady) {
+    pendingSecondInstance = true;
+    return;
+  }
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createMainWindow();
+  }
+  showMainWindowAndReassert();
+  if (dashboardWindow && !dashboardWindow.isDestroyed() && dashboardWindow.isVisible()) {
+    dashboardWindow.focus();
+  }
+}
+
+function destroyAllWindows() {
+  hideResponseWindow({ destroy: true });
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.destroy();
+    }
+  }
+  mainWindow = null;
+  dashboardWindow = null;
+  responseWindow = null;
 }
 
 function createDashboardWindow() {
@@ -1418,8 +1451,11 @@ async function extractAccessibilityText(args = {}) {
     1,
     Math.min(Number(args.maxChars || args.max_chars || 8000), 20000)
   );
+  // The script stops reading at timeBudgetMs and returns partial text; the
+  // process timeout leaves room for PowerShell startup on top of that.
   const config = {
     maxChars,
+    timeBudgetMs: 6000,
     excludeProcessId: process.pid,
     appName: app.getName() || "Ai.Intvra",
   };
@@ -1430,7 +1466,7 @@ async function extractAccessibilityText(args = {}) {
   )}; Invoke-PhantomAccessibilityText -ConfigJson ${quotePowerShellSingle(
     JSON.stringify(config)
   )}`;
-  const raw = await runPowerShell(command);
+  const raw = await runPowerShell(command, 14000);
   if (!raw) {
     throw new Error("Windows accessibility text extraction returned no data.");
   }
@@ -1664,6 +1700,73 @@ async function dbExecute(sql, params = []) {
   return { rowsAffected, lastInsertId: lastInsert };
 }
 
+// Saves a conversation and its full message list in one transaction. Nothing
+// between BEGIN and COMMIT awaits, so saves from different windows or hooks
+// can't interleave the way separate db_execute calls did.
+async function dbSaveConversation(conversation) {
+  const db = await getDb();
+  if (!conversation?.id || !Array.isArray(conversation.messages)) {
+    throw new Error("Invalid conversation data");
+  }
+  const now = Date.now();
+
+  db.run("BEGIN");
+  try {
+    db.run(
+      `INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET title = excluded.title, updated_at = excluded.updated_at`,
+      [
+        conversation.id,
+        String(conversation.title || "Untitled"),
+        Number(conversation.createdAt) || now,
+        Number(conversation.updatedAt) || now,
+      ]
+    );
+    db.run("DELETE FROM messages WHERE conversation_id = ?", [conversation.id]);
+
+    const usedIds = new Set();
+    const idTaken = db.prepare("SELECT 1 FROM messages WHERE id = ?");
+    const insert = db.prepare(
+      "INSERT INTO messages (id, conversation_id, role, content, timestamp, attached_files) VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    try {
+      for (const message of conversation.messages) {
+        if (!message?.id || typeof message.content !== "string") continue;
+        let id = String(message.id);
+        // Older message IDs were only unique per millisecond and role, so they
+        // can repeat inside a conversation or collide with another one.
+        while (usedIds.has(id) || idTaken.get([id]).length) {
+          idTaken.reset();
+          id = `${message.id}_${Math.random().toString(36).slice(2, 8)}`;
+        }
+        idTaken.reset();
+        usedIds.add(id);
+        insert.run([
+          id,
+          conversation.id,
+          message.role,
+          message.content,
+          Number(message.timestamp) || now,
+          message.attachedFiles ? JSON.stringify(message.attachedFiles) : null,
+        ]);
+      }
+    } finally {
+      idTaken.free();
+      insert.free();
+    }
+    db.run("COMMIT");
+  } catch (error) {
+    try {
+      db.run("ROLLBACK");
+    } catch {
+      // The transaction may already be closed.
+    }
+    throw error;
+  }
+  persistDb();
+  return conversation;
+}
+
 async function dbSelect(sql, params = []) {
   const db = await getDb();
   const stmt = db.prepare(sql);
@@ -1872,6 +1975,8 @@ async function handleInvoke(command, args = {}) {
       return auth.getState({ refresh: false });
     case "auth_logout":
       return auth.logout();
+    case "auth_open_checkout":
+      return auth.openCheckout(typeof args.plan === "string" ? args.plan : null);
     case "set_window_height":
       resizeMainWindow(args.height);
       return null;
@@ -2037,6 +2142,8 @@ async function handleInvoke(command, args = {}) {
       return dbExecute(args.sql, args.params || []);
     case "db_select":
       return dbSelect(args.sql, args.params || []);
+    case "db_save_conversation":
+      return dbSaveConversation(args.conversation);
     case "get_conversation_storage_info":
       return getConversationStorageInfo();
     case "choose_conversation_storage_folder": {
@@ -2142,14 +2249,15 @@ app.whenReady().then(async () => {
   // Signed-out users land on the dashboard's sign-in screen.
   if (!(await auth.getState({ refresh: false })).user) showDashboard();
   await getDb();
+  appReady = true;
+  if (pendingSecondInstance) {
+    pendingSecondInstance = false;
+    focusExistingInstance();
+  }
 });
 
 app.on("second-instance", () => {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    createMainWindow();
-    return;
-  }
-  showMainWindowAndReassert();
+  focusExistingInstance();
 });
 
 app.on("window-all-closed", () => {
@@ -2173,6 +2281,7 @@ app.on("before-quit", () => {
   }
   globalShortcut.unregisterAll();
   persistDbSync();
+  destroyAllWindows();
   if (tray && !tray.isDestroyed()) {
     tray.destroy();
   }

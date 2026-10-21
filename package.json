@@ -1,10 +1,13 @@
 {
   "name": "ai-intvra",
   "private": true,
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Ai.Intvra - real-time AI interview assistant overlay for Windows.",
   "author": "techbro20 <victor.immoh@gmail.com>",
   "homepage": "https://ai.intvra.com",
+  "intvra": {
+    "apiUrl": "https://api.intvra.com"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/techbro20/Intvra.git"
@@ -84,6 +87,7 @@
     "productName": "Ai.Intvra",
     "executableName": "AiIntvra",
     "copyright": "Copyright (C) 2026 techbro20",
+    "afterPack": "./scripts/after-pack.cjs",
     "directories": {
       "output": "release"
     },
