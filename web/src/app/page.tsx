@@ -90,6 +90,10 @@ const faqs = [
     a: "Windows 10 and 11 are supported today. macOS is on the roadmap — join the waitlist to hear first.",
   },
   {
+    q: "How do I use the overlay?",
+    a: "Open the Guide (ai.intvra.com/guide) for every icon on the command bar and answer panel, plus default shortcuts. In short: turn on headphones to listen, type or use voice to ask manually, and read answers in the floating response panel.",
+  },
+  {
     q: "I found a bug. How do I get help?",
     a: "Use the contact form on our Contact page or email support@intvra.com. Tell us what you were doing, what you expected, and what happened, and we'll get back to you by email.",
   },
