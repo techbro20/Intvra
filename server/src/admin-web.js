@@ -199,14 +199,26 @@ function paymentsTable(rows, { compact = false, back = "/admin/payments" } = {})
       }
       const link = explorerUrl(p);
       const tx = link ? `<a href="${h(link)}" target="_blank" rel="noopener" class="mono">View transaction ↗</a>` : "";
-      const actions =
-        p.status === "paid"
-          ? ""
-          : `<form class="inline" method="post" action="/admin/payments/${h(p.id)}/confirm" data-confirm="${h(`Approve this payment and apply ${PAID_PLANS[p.plan]?.name || p.plan} to ${p.email}?`)}">
-               <input type="hidden" name="back" value="${h(back)}"><button class="btn" type="submit">Approve</button></form>
-             <form class="inline" method="post" action="/admin/payments/${h(p.id)}/reject" style="margin-top:6px">
-               <input type="hidden" name="back" value="${h(back)}"><input name="reason" placeholder="Reason" style="width:120px">
+      const approve = `<form class="inline pay-act" method="post" action="/admin/payments/${h(p.id)}/confirm" data-confirm="${h(
+        p.status === "failed"
+          ? `Approve this rejected payment and apply ${PAID_PLANS[p.plan]?.name || p.plan} to ${p.email}?`
+          : `Approve this payment and apply ${PAID_PLANS[p.plan]?.name || p.plan} to ${p.email}?`
+      )}"><input type="hidden" name="back" value="${h(back)}"><button class="btn" type="submit">${p.status === "failed" ? "Approve anyway" : "Approve"}</button></form>`;
+      const reject = `<form class="inline pay-act" method="post" action="/admin/payments/${h(p.id)}/reject">
+               <input type="hidden" name="back" value="${h(back)}"><input name="reason" placeholder="Reason" autocomplete="off">
                <button class="btn danger" type="submit">Reject</button></form>`;
+      let actionCell = `<span class="muted small">–</span>`;
+      if (p.status === "review" || p.status === "confirming") {
+        actionCell = `${approve}${reject}`;
+      } else if (p.status === "failed") {
+        actionCell = `<details><summary class="small muted" style="cursor:pointer">Undo reject</summary>${approve}</details>`;
+      } else if (p.status === "pending") {
+        actionCell = `<details><summary class="small muted" style="cursor:pointer">Actions</summary>${approve}${reject}</details>`;
+      } else if (p.status === "paid") {
+        actionCell = `<span class="muted small">Settled</span>`;
+      } else if (p.status === "expired") {
+        actionCell = `<span class="muted small">Expired</span>`;
+      }
       return `<tr>
         <td class="small">${fmtDate(p.created_at)}${p.paid_at ? `<div class="muted">paid ${fmtDate(p.paid_at)}</div>` : ""}</td>
         <td>${user}</td>
@@ -215,9 +227,7 @@ function paymentsTable(rows, { compact = false, back = "/admin/payments" } = {})
         <td class="mono">${h(p.amount)} ${h(p.currency)}</td>
         <td>${badge(p.status)}</td>
         <td class="small"><div class="muted">${h(p.detail || "")}</div>${tx}<div class="mono muted" style="margin-top:2px">${h(p.id)}</div></td>
-        <td style="white-space:nowrap">${p.status === "pending" || p.status === "expired" ? "" : actions}${
-          p.status === "pending" || p.status === "expired" ? `<details><summary class="small muted" style="cursor:pointer">Actions</summary>${actions}</details>` : ""
-        }</td>
+        <td class="pay-actions">${actionCell}</td>
       </tr>`;
     })
     .join("");
@@ -368,17 +378,17 @@ admin.get("/users/:id", (c) => {
         ${post(
           "credits",
           `<div class="small muted" style="margin-bottom:4px">Add or remove credits (negative removes)</div>
-           <div style="display:flex;gap:6px"><input name="amount" type="number" step="1" placeholder="e.g. 50" style="width:100px" required>
-           <input name="reason" placeholder="Reason" style="flex:1"><button class="btn" type="submit">Apply</button></div>`
+           <div class="row-fields"><input name="amount" type="number" step="1" placeholder="e.g. 50" required>
+           <input name="reason" placeholder="Reason"><button class="btn" type="submit">Apply</button></div>`
         )}
         ${post(
           "plan",
           `<div class="small muted" style="margin-bottom:4px">Set plan (Pro gets ${PAID_PLANS.pro.credits} fresh credits until the date)</div>
-           <div style="display:flex;gap:6px;flex-wrap:wrap"><select name="plan">${PLANS.map((p) => `<option value="${p}" ${p === user.plan ? "selected" : ""}>${PLAN_LABELS[p]}</option>`).join("")}</select>
+           <div class="row-fields"><select name="plan">${PLANS.map((p) => `<option value="${p}" ${p === user.plan ? "selected" : ""}>${PLAN_LABELS[p]}</option>`).join("")}</select>
            <input name="renews" type="date" value="${renewDefault}" title="Pro end date"><button class="btn" type="submit">Set</button></div>`,
           "Change this account's plan?"
         )}
-        <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
+        <div class="action-row">
           ${!user.trial_claimed_at ? post("grant-trial", `<button class="btn ghost" type="submit">Give free trial</button>`, "Give this account the free trial credits?") : ""}
           ${post("admin", `<input type="hidden" name="on" value="${user.is_admin ? "0" : "1"}"><button class="btn ghost" type="submit">${user.is_admin ? "Remove admin" : "Make admin"}</button>`, user.is_admin ? "Remove admin access?" : "Give this account admin access, including this dashboard?")}
           ${post("sign-out", `<button class="btn ghost" type="submit">Sign out everywhere</button>`, "Sign this account out on every device?")}
@@ -458,7 +468,7 @@ admin.get("/activity", (c) => {
       }
     </table></div></div>
     <div class="grid g2">
-      <div class="card"><h2>Refused free trials</h2><table>
+      <div class="card"><h2>Refused free trials</h2><div class="table-scroll"><table>
         <tr><th>Email</th><th>Reason</th><th>When</th></tr>
         ${
           refused.length
@@ -467,8 +477,8 @@ admin.get("/activity", (c) => {
                 .join("")
             : emptyRow(3, "None.")
         }
-      </table></div>
-      <div class="card"><h2>Failed AI requests</h2><table>
+      </table></div></div>
+      <div class="card"><h2>Failed AI requests</h2><div class="table-scroll"><table>
         <tr><th>Email</th><th>Type</th><th>When</th></tr>
         ${
           failures.length
@@ -477,7 +487,7 @@ admin.get("/activity", (c) => {
                 .join("")
             : emptyRow(3, "None.")
         }
-      </table></div>
+      </table></div></div>
     </div>`;
   return render(c, "activity", "Activity", body);
 });
