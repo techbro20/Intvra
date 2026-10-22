@@ -8,4 +8,8 @@ export const site = {
   repo: "https://github.com/techbro20/Intvra",
   releases: "https://github.com/techbro20/Intvra/releases",
   githubApi: "https://api.github.com/repos/techbro20/Intvra/releases/latest",
+  // Accounts and checkout server. Override with NEXT_PUBLIC_API_URL (e.g. on Vercel).
+  api: (process.env.NEXT_PUBLIC_API_URL || "https://api.intvra.com").replace(/\/+$/, ""),
 };
+
+export const checkoutUrl = (plan: string) => `${site.api}/pay?plan=${plan}`;
