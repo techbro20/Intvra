@@ -43,7 +43,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many requests. Please try again in a few minutes." }, { status: 429 });
   }
 
-  const kind = body.kind === "waitlist" ? "waitlist" : "contact";
+  const kind =
+    body.kind === "waitlist" ? "waitlist" : body.kind === "unsubscribe" ? "unsubscribe" : "contact";
   const email = clean(body.email, 200);
   const name = clean(body.name, 100);
   const topic = clean(body.topic, 50) || "General";
@@ -65,12 +66,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const subject =
-    kind === "waitlist" ? `Waitlist signup: ${email}` : `[${topic}] ${name ? `${name} — ` : ""}${email}`;
-  const text =
-    kind === "waitlist"
-      ? `New waitlist signup\n\nEmail: ${email}\nIP: ${ip}\nTime: ${new Date().toISOString()}`
-      : `New ${topic} message\n\nName: ${name || "-"}\nEmail: ${email}\nTopic: ${topic}\n\n${message}\n\n---\nIP: ${ip}\nTime: ${new Date().toISOString()}`;
+  let subject: string;
+  let text: string;
+  if (kind === "waitlist") {
+    subject = `Waitlist signup: ${email}`;
+    text = `New waitlist signup\n\nEmail: ${email}\nIP: ${ip}\nTime: ${new Date().toISOString()}`;
+  } else if (kind === "unsubscribe") {
+    subject = `Unsubscribe request: ${email}`;
+    text = `Please remove this address from the waitlist and any marketing / newsletter emails.\n\nEmail: ${email}\nNote: ${message || "-"}\nIP: ${ip}\nTime: ${new Date().toISOString()}`;
+  } else {
+    subject = `[${topic}] ${name ? `${name} — ` : ""}${email}`;
+    text = `New ${topic} message\n\nName: ${name || "-"}\nEmail: ${email}\nTopic: ${topic}\n\n${message}\n\n---\nIP: ${ip}\nTime: ${new Date().toISOString()}`;
+  }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

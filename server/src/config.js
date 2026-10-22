@@ -11,7 +11,13 @@ const int = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const num = (value, fallback) => {
+  const parsed = Number.parseFloat(value ?? "");
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 const env = process.env;
+const paystackCurrency = (env.PAYSTACK_CURRENCY || "USD").toUpperCase();
 const port = int(env.PORT, 8787);
 const aiApiKeys = list(env.AI_API_KEYS);
 
@@ -22,8 +28,9 @@ export const config = {
   publicUrl: (env.PUBLIC_URL || `http://127.0.0.1:${port}`).replace(/\/+$/, ""),
   databasePath: path.resolve(env.DATABASE_PATH || "./data/intvra.db"),
   trustProxy: env.TRUST_PROXY === "1",
+  siteUrl: (env.SITE_URL || "https://ai.intvra.com").replace(/\/+$/, ""),
 
-  freeCredits: int(env.FREE_CREDITS, 20),
+  freeCredits: int(env.FREE_CREDITS, 40),
   freeAnswerCost: Math.max(1, int(env.FREE_ANSWER_COST, 2)),
   trialIpLimit: int(env.TRIAL_IP_LIMIT, 3),
   trialIpWindowDays: int(env.TRIAL_IP_WINDOW_DAYS, 30),
@@ -31,7 +38,7 @@ export const config = {
   allowedEmailDomains: list(env.ALLOWED_EMAIL_DOMAINS).map((d) => d.toLowerCase()),
   disposableDomainsFile: env.DISPOSABLE_DOMAINS_FILE ? path.resolve(env.DISPOSABLE_DOMAINS_FILE) : "",
   sessionDays: int(env.SESSION_DAYS, 90),
-  upgradeUrl: env.UPGRADE_URL || "https://ai.intvra.com/#pricing",
+  upgradeUrl: env.UPGRADE_URL || `${(env.PUBLIC_URL || `http://127.0.0.1:${port}`).replace(/\/+$/, "")}/pay`,
   supportEmail: env.SUPPORT_EMAIL || "support@intvra.com",
 
   google: {
@@ -49,7 +56,35 @@ export const config = {
     apiKeys: aiApiKeys,
     models: list(env.AI_MODELS || "llama-3.3-70b-versatile,openai/gpt-oss-120b,llama-3.1-8b-instant"),
     visionModels: list(env.AI_VISION_MODELS),
+    visionBaseUrl: (env.VISION_BASE_URL || env.AI_BASE_URL || "https://api.groq.com/openai/v1").replace(/\/+$/, ""),
+    visionApiKeys: env.VISION_API_KEYS ? list(env.VISION_API_KEYS) : aiApiKeys,
     maxOutputTokens: int(env.AI_MAX_OUTPUT_TOKENS, 2048),
+  },
+
+  paystack: {
+    secretKey: env.PAYSTACK_SECRET_KEY || "",
+    publicKey: env.PAYSTACK_PUBLIC_KEY || "",
+    currency: paystackCurrency,
+    // Prices in the Paystack currency's main unit. Only needed when charging in something other than USD.
+    prices: {
+      payg: num(env.PAYSTACK_PRICE_PAYG, 5),
+      pro: num(env.PAYSTACK_PRICE_PRO, 15),
+      lifetime: num(env.PAYSTACK_PRICE_LIFETIME, 200),
+    },
+  },
+
+  crypto: {
+    bscAddress: (env.CRYPTO_BSC_ADDRESS || "").trim().toLowerCase(),
+    ethAddress: (env.CRYPTO_ETH_ADDRESS || "").trim().toLowerCase(),
+    ltcAddress: (env.CRYPTO_LTC_ADDRESS || "").trim(),
+    bscRpcUrl: env.BSC_RPC_URL || "https://bsc-dataseed.bnbchain.org",
+    bscConfirmations: int(env.BSC_CONFIRMATIONS, 5),
+    ethRpcUrl: env.ETH_RPC_URL || "https://ethereum-rpc.publicnode.com",
+    ethConfirmations: int(env.ETH_CONFIRMATIONS, 12),
+    ltcApiUrl: (env.LTC_API_URL || "https://litecoinspace.org/api").replace(/\/+$/, ""),
+    ltcConfirmations: int(env.LTC_CONFIRMATIONS, 2),
+    orderMinutes: int(env.CRYPTO_ORDER_MINUTES, 120),
+    ltcQuoteMinutes: int(env.LTC_QUOTE_MINUTES, 30),
   },
 
   stt: {
@@ -64,6 +99,9 @@ export const config = {
 export function answerCost(user) {
   return user.plan === "free" ? config.freeAnswerCost : 1;
 }
+
+export const paystackEnabled = () => Boolean(config.paystack.secretKey && config.paystack.publicKey);
+export const cryptoEnabled = () => Boolean(config.crypto.bscAddress || config.crypto.ethAddress || config.crypto.ltcAddress);
 
 export function googleEnabled() {
   return Boolean(config.google.clientId && config.google.clientSecret);

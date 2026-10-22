@@ -1,4 +1,7 @@
+import { checkoutUrl } from "@/lib/site";
+
 type Plan = {
+  id: string;
   name: string;
   price: string;
   period?: string;
@@ -10,13 +13,15 @@ type Plan = {
 
 const plans: Plan[] = [
   {
+    id: "free",
     name: "Free",
     price: "$0",
-    credits: "20 credits",
+    credits: "40 credits",
     blurb: "Try it on a real interview.",
-    features: ["10 AI answers (2 credits each)", "Live listening included", "All core features"],
+    features: ["20 AI answers (2 credits each)", "Live listening included", "All core features"],
   },
   {
+    id: "payg",
     name: "Pay as you go",
     price: "$5",
     credits: "100 credits",
@@ -24,15 +29,17 @@ const plans: Plan[] = [
     features: ["100 AI answers", "Credits never expire", "No subscription"],
   },
   {
+    id: "pro",
     name: "Pro",
     price: "$15",
     period: "/month",
     credits: "600 credits / month",
     blurb: "For an active job search.",
-    features: ["600 AI answers every month", "Priority, faster models", "Cancel anytime"],
+    features: ["600 AI answers every 30 days", "Priority, faster models", "No auto-charge: renew when you need it"],
     highlight: true,
   },
   {
+    id: "lifetime",
     name: "Lifetime",
     price: "$200",
     period: "one-time",
@@ -86,18 +93,19 @@ export function Pricing({ downloadUrl }: { downloadUrl: string }) {
               ))}
             </ul>
             <a
-              href={downloadUrl}
+              href={plan.id === "free" ? downloadUrl : checkoutUrl(plan.id)}
               className={`mt-6 rounded-full px-4 py-2.5 text-center text-sm font-semibold ${
                 plan.highlight ? "btn-primary text-white" : "border border-line text-text hover:border-cyan/50"
               }`}
             >
-              Download
+              {plan.id === "free" ? "Download free" : `Get ${plan.name}`}
             </a>
           </div>
         ))}
       </div>
       <p className="mt-8 text-center text-sm text-muted">
-        Create your account in the app. Upgrade anytime from your account — pay by card, with M-Pesa coming soon.
+        Pay with M-Pesa, card, Apple Pay, USDT or USDC (BNB Smart Chain), USDC (Ethereum) or Litecoin. Sign in with the same email in the
+        app and your plan is ready.
       </p>
     </>
   );

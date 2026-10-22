@@ -19,26 +19,35 @@ export default function TermsPage() {
       </p>
       <h2>Plans and payments</h2>
       <p>
-        On paid plans, one credit equals one AI-generated answer. Every new account receives 20 free credits, granted
-        once; on the free plan each answer uses 2 credits, so the trial covers 10 answers.
+        On paid plans, one credit equals one AI-generated answer. Every new account receives 40 free credits, granted
+        once; on the free plan each answer uses 2 credits, so the trial covers 20 answers.
       </p>
       <p>
         <strong className="text-text">Pay as you go</strong> — $5 for 100 credits. Purchased credits do not expire.
       </p>
       <p>
-        <strong className="text-text">Pro</strong> — $15 per month for 600 credits. The subscription renews monthly
-        until cancelled; unused monthly credits do not roll over. When you cancel, access continues until the end of the
-        paid period.
+        <strong className="text-text">Pro</strong> — $15 for 30 days with 600 credits. Pro does not charge you
+        automatically: you renew it yourself, and renewing early adds 30 days to your current period. Each period
+        starts with 600 credits; unused Pro credits do not roll over. When a period ends, your account moves to Pay as
+        you go and any credits you bought separately stay on your account.
       </p>
       <p>
         <strong className="text-text">Lifetime</strong> — a one-time payment of $200 for unlimited use of the app with
         your own AI provider API key. Usage of your key is billed by your provider, not by us.
       </p>
-      <p>Payments are processed in the browser by our payment providers. Prices are in US dollars.</p>
+      <p>
+        Payments are made in the browser and priced in US dollars. M-Pesa, card and Apple Pay payments are processed by
+        Paystack; your bank or mobile money provider may convert the amount to your local currency. Crypto payments are
+        accepted in USDT or USDC on BNB Smart Chain (BEP20), USDC on Ethereum (ERC20) and Litecoin, for the exact amount
+        and network shown at checkout. Crypto sent on the wrong
+        network, in a different token or for a different amount can&apos;t be credited automatically; contact us and
+        we&apos;ll do our best to help.
+      </p>
       <h2>Refunds</h2>
       <p>
         If something isn&apos;t working, contact us within 7 days of purchase and we&apos;ll help or refund unused
-        purchases. Credits that have already been used are not refundable.
+        purchases made through Paystack. Credits that have already been used are not refundable. Crypto payments are
+        final and can&apos;t be refunded.
       </p>
       <h2>The software</h2>
       <p>

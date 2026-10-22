@@ -23,8 +23,12 @@ export default async function ContactPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan">Support</p>
           <h1 className="mt-3 font-display text-4xl font-bold tracking-tight">How can we help?</h1>
           <p className="mt-4 text-muted">
-            Found a bug, have a billing question, or need help getting set up? Send us a message and we&apos;ll get back
-            to you by email.
+            Found a bug, have a billing question, need help getting set up, or want your data deleted? Send us a message
+            and we&apos;ll get back to you by email. For waitlist or newsletter emails, use{" "}
+            <a href="/unsubscribe" className="text-cyan hover:underline">
+              Unsubscribe
+            </a>
+            .
           </p>
           <div className="mt-8 rounded-2xl border border-line bg-panel/60 p-6">
             <h2 className="font-display font-semibold">Email us directly</h2>
@@ -40,6 +44,14 @@ export default async function ContactPage() {
               <li>What you expected vs. what you saw</li>
               <li>Your app version and Windows version</li>
             </ul>
+          </div>
+          <div className="mt-5 rounded-2xl border border-line bg-panel/60 p-6">
+            <h2 className="font-display font-semibold">Delete my data</h2>
+            <p className="mt-2 text-sm text-muted">
+              Choose the topic &ldquo;Delete my data&rdquo; in the form. We&apos;ll confirm by email and remove your
+              account data from our servers (billing records we must keep for tax or fraud may remain for a limited
+              time).
+            </p>
           </div>
         </div>
         <ContactForm />

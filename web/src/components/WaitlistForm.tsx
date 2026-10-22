@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { submitForm, type FormStatus } from "@/lib/submit-form";
 
@@ -18,9 +19,18 @@ export function WaitlistForm() {
 
   if (status.state === "sent") {
     return (
-      <p className="rounded-full border border-cyan/30 bg-panel px-6 py-3.5 text-center text-sm text-text">
-        You&apos;re on the list! We&apos;ll email you with early access and launch offers.
-      </p>
+      <div className="text-center">
+        <p className="rounded-full border border-cyan/30 bg-panel px-6 py-3.5 text-sm text-text">
+          You&apos;re on the list! We&apos;ll email you with early access and launch offers.
+        </p>
+        <p className="mt-3 text-xs text-muted">
+          Changed your mind?{" "}
+          <Link href="/unsubscribe" className="text-cyan hover:underline">
+            Unsubscribe
+          </Link>
+          .
+        </p>
+      </div>
     );
   }
 
@@ -58,6 +68,12 @@ export function WaitlistForm() {
         </button>
       </div>
       {status.state === "error" && <p className="mt-3 text-center text-sm text-red-300">{status.message}</p>}
+      <p className="mt-3 text-center text-xs text-muted">
+        <Link href="/unsubscribe" className="text-cyan hover:underline">
+          Unsubscribe
+        </Link>{" "}
+        anytime.
+      </p>
     </form>
   );
 }

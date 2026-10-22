@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { submitForm, type FormStatus } from "@/lib/submit-form";
 
-const topics = ["Bug report", "Billing", "Account", "Feature request", "Other"];
+const topics = ["Bug report", "Billing", "Account", "Delete my data", "Feature request", "Other"];
 
 const field =
   "w-full rounded-xl border border-line bg-ink/80 px-4 py-3 text-sm text-text placeholder:text-muted/70 focus:border-cyan/60 focus:outline-none";
@@ -75,7 +75,11 @@ export function ContactForm() {
           required
           minLength={10}
           rows={6}
-          placeholder="What happened? For bugs, include what you expected, what you saw, and your app version."
+          placeholder={
+            form.topic === "Delete my data"
+              ? "Confirm you want your account and associated data deleted. Include the email on the account if different from above."
+              : "What happened? For bugs, include what you expected, what you saw, and your app version."
+          }
           value={form.message}
           onChange={update("message")}
           className={`${field} resize-y`}

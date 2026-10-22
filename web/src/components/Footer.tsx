@@ -26,6 +26,7 @@ export function Footer() {
             <span className="font-display font-semibold">Contact</span>
             <Link href="/contact" className="text-muted hover:text-text">Report a bug</Link>
             <Link href="/#waitlist" className="text-muted hover:text-text">Join the waitlist</Link>
+            <Link href="/unsubscribe" className="text-muted hover:text-text">Unsubscribe</Link>
             <a href={`mailto:${site.email}`} className="text-muted hover:text-text">{site.email}</a>
           </div>
         </div>

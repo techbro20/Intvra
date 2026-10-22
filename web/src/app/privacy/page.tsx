@@ -28,14 +28,18 @@ export default function PrivacyPage() {
         If you create an account, we store your email address and credit balance. To allow one free trial per computer,
         the app also sends a one-way hash of your computer&apos;s device ID; it can&apos;t be used to identify you or
         your hardware. We also keep a one-way hash of the network address used when a free trial is claimed, to limit
-        how many trials one network can receive. Payments are processed by our payment
+        how many trials one network can receive. For crypto payments we store the transaction ID you submit, which is
+        public on the blockchain. Card, M-Pesa and Apple Pay payments are processed by our payment
         provider; we never see or store your card details.
       </p>
       <h2>Analytics</h2>
       <p>The website may use privacy-friendly, cookie-less analytics to count visits. We do not sell your data.</p>
-      <h2>Contact</h2>
+      <h2>Contact and deletion</h2>
       <p>
-        To ask about or delete your data, email <a href={`mailto:${site.email}`}>{site.email}</a>.
+        To ask about your data or request deletion, use the{" "}
+        <a href="/contact">Contact</a> form and choose &ldquo;Delete my data,&rdquo; or email{" "}
+        <a href={`mailto:${site.email}`}>{site.email}</a>. To leave the waitlist or stop marketing emails, use{" "}
+        <a href="/unsubscribe">Unsubscribe</a>.
       </p>
     </LegalPage>
   );
