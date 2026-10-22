@@ -19,16 +19,15 @@ export default function TermsPage() {
       </p>
       <h2>Plans and payments</h2>
       <p>
-        On paid plans, one credit equals one AI-generated answer. Every new account receives 40 free credits, granted
-        once; on the free plan each answer uses 2 credits, so the trial covers 20 answers.
+        One credit equals one AI-generated answer. Every new account receives 40 free credits (20 answers), granted once.
       </p>
       <p>
-        <strong className="text-text">Pay as you go</strong> — $5 for 100 credits. Purchased credits do not expire.
+        <strong className="text-text">Pay as you go</strong> — $5 for 150 credits. Purchased credits do not expire.
       </p>
       <p>
-        <strong className="text-text">Pro</strong> — $15 for 30 days with 600 credits. Pro does not charge you
+        <strong className="text-text">Pro</strong> — $15 for 30 days with 700 credits. Pro does not charge you
         automatically: you renew it yourself, and renewing early adds 30 days to your current period. Each period
-        starts with 600 credits; unused Pro credits do not roll over. When a period ends, your account moves to Pay as
+        starts with 700 credits; unused Pro credits do not roll over. When a period ends, your account moves to Pay as
         you go and any credits you bought separately stay on your account.
       </p>
       <p>

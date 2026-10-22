@@ -1,7 +1,11 @@
-// Account administration from the server shell. Usage: npm run admin -- <command> [args]
-import { PLANS, adjustCredits, db, getUserByEmail } from "../src/db.js";
+// Account administration from the server shell (the web dashboard at /admin does the same).
+// Usage: npm run admin -- <command> [args]
+import { PLANS, db, getUserByEmail } from "../src/db.js";
+import { PAID_PLANS } from "../src/plans.js";
+import * as ops from "../src/admin-ops.js";
 
 const [command, ...args] = process.argv.slice(2);
+const BY = "cli";
 
 const fmtDate = (ms) => (ms ? new Date(ms).toISOString().replace("T", " ").slice(0, 16) : "-");
 
@@ -20,7 +24,7 @@ function printUser(user) {
       `Email:      ${user.email}`,
       `Name:       ${user.name || "-"}`,
       `Plan:       ${user.plan}${user.plan_renews_at ? ` (renews ${fmtDate(user.plan_renews_at)})` : ""}`,
-      `Credits:    ${user.credits}`,
+      `Credits:    ${user.credits + (user.plan_credits || 0)}${user.plan_credits ? ` (${user.plan_credits} from Pro this period)` : ""}`,
       `Admin:      ${user.is_admin ? "yes" : "no"}`,
       `Disabled:   ${user.disabled ? "yes" : "no"}`,
       `Trial:      ${
@@ -69,43 +73,69 @@ const commands = {
 
   grant(email, amount, ...reason) {
     const user = requireUser(email);
-    const delta = Number.parseInt(amount, 10);
-    if (!Number.isFinite(delta) || delta === 0) {
-      console.error("Amount must be a non-zero whole number (negative to remove credits).");
-      process.exit(1);
-    }
-    const balance = adjustCredits(user.id, delta, reason.join(" ") || "admin_grant");
-    console.log(`${delta > 0 ? "Added" : "Removed"} ${Math.abs(delta)} credits. ${user.email} now has ${balance}.`);
+    const balance = ops.grantCredits(BY, user.id, amount, reason.join(" "));
+    console.log(`Done. ${user.email} now has ${balance} credits.`);
   },
 
   "set-plan"(email, plan, renewsAt) {
     const user = requireUser(email);
-    if (!PLANS.includes(plan)) {
-      console.error(`Plan must be one of: ${PLANS.join(", ")}`);
-      process.exit(1);
-    }
-    const renews = renewsAt ? Date.parse(renewsAt) : null;
-    db.prepare("UPDATE users SET plan = ?, plan_renews_at = ? WHERE id = ?").run(plan, Number.isFinite(renews) ? renews : null, user.id);
-    console.log(`${user.email} is now on the ${plan} plan.`);
+    const renews = ops.setPlan(BY, user.id, plan, renewsAt || null);
+    console.log(`${user.email} is now on the ${plan} plan.${plan === "pro" ? ` ${PAID_PLANS.pro.credits} credits until ${fmtDate(renews)}.` : ""}`);
   },
 
   admin(email, value = "on") {
     const user = requireUser(email);
-    db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(value === "off" ? 0 : 1, user.id);
+    ops.setAdmin(BY, user.id, value !== "off");
     console.log(`${user.email} admin: ${value === "off" ? "off" : "on"}.`);
   },
 
   disable(email) {
     const user = requireUser(email);
-    db.prepare("UPDATE users SET disabled = 1 WHERE id = ?").run(user.id);
-    db.prepare("DELETE FROM sessions WHERE user_id = ?").run(user.id);
+    ops.setDisabled(BY, user.id, true);
     console.log(`${user.email} disabled and signed out everywhere.`);
   },
 
   enable(email) {
     const user = requireUser(email);
-    db.prepare("UPDATE users SET disabled = 0 WHERE id = ?").run(user.id);
+    ops.setDisabled(BY, user.id, false);
     console.log(`${user.email} enabled.`);
+  },
+
+  payments(filter = "") {
+    const byStatus = ["pending", "confirming", "paid", "review", "failed", "expired"].includes(filter);
+    const rows = db
+      .prepare(
+        `SELECT p.*, u.email FROM payments p JOIN users u ON u.id = p.user_id
+         WHERE ${byStatus ? "p.status = ?" : "u.email LIKE ?"} ORDER BY p.created_at DESC LIMIT 100`
+      )
+      .all(byStatus ? filter : `%${filter.toLowerCase()}%`);
+    console.table(
+      rows.map((p) => ({
+        id: p.id,
+        email: p.email,
+        plan: p.plan,
+        method: p.method,
+        amount: `${p.amount} ${p.currency}`,
+        status: p.status,
+        created: fmtDate(p.created_at),
+        detail: p.detail || "",
+      }))
+    );
+    const review = rows.filter((p) => p.status === "review");
+    if (review.length) {
+      console.log("\nNeeds review:");
+      for (const p of review) console.log(`  ${p.id}  ${p.provider_ref || ""}`);
+    }
+  },
+
+  "confirm-payment"(id) {
+    const result = ops.confirmPayment(BY, id);
+    console.log(result === "paid" ? "Confirmed and plan applied." : result === "already_paid" ? "Already paid; nothing to do." : `Result: ${result}`);
+  },
+
+  "reject-payment"(id, ...reason) {
+    ops.rejectPayment(BY, id, reason.join(" "));
+    console.log("Marked as failed.");
   },
 
   stats() {
@@ -135,8 +165,17 @@ if (!commands[command]) {
   set-plan <email> <plan> [renews]   Plan: ${PLANS.join(" | ")}; optional renewal date (YYYY-MM-DD)
   admin <email> [on|off]             Admins can use their own API keys in the app
   disable <email> / enable <email>   Block or unblock an account
+  payments [email|status]            Recent payments (status: pending, confirming, paid, review, failed)
+  confirm-payment <id>               Approve a payment (e.g. one in review) and apply its plan
+  reject-payment <id> [reason]       Mark a payment as failed
   stats                              Usage summary`);
   process.exit(command ? 1 : 0);
 }
 
-commands[command](...args);
+try {
+  commands[command](...args);
+} catch (error) {
+  if (!(error instanceof ops.AdminError)) throw error;
+  console.error(error.message);
+  process.exit(1);
+}

@@ -59,7 +59,7 @@ const features = [
 const faqs = [
   {
     q: "What is a credit?",
-    a: "On paid plans, one credit is one AI answer. On the free plan each answer uses 2 credits, so your 40 free credits cover 20 answers. Listening and transcribing the interviewer is always free — you only spend credits when an answer is generated. A typical 30-minute interview uses around 10–20 answers.",
+    a: "One credit is one AI answer. New accounts get 40 free credits (20 answers). Listening and transcribing the interviewer is always free — you only spend credits when an answer is generated. A typical 30-minute interview uses around 10–20 answers.",
   },
   {
     q: "Can the interviewer see Ai.Intvra?",
