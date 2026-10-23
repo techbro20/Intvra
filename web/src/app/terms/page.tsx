@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Terms of Service" };
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Service" updated="October 2, 2026">
+    <LegalPage title="Terms of Service" updated="October 23, 2026">
       <p>
         These terms govern your use of the Ai.Intvra desktop app and website. By downloading or using Ai.Intvra you
         agree to them.
@@ -19,7 +19,7 @@ export default function TermsPage() {
       </p>
       <h2>Plans and payments</h2>
       <p>
-        One credit equals one AI-generated answer. Every new account receives 40 free credits (20 answers), granted once.
+        One credit equals one AI-generated answer. Every new account receives 40 free credits, granted once.
       </p>
       <p>
         <strong className="text-text">Pay as you go</strong> — $5 for 150 credits. Purchased credits do not expire.

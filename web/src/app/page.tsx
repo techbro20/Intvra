@@ -59,7 +59,7 @@ const features = [
 const faqs = [
   {
     q: "What is a credit?",
-    a: "One credit is one AI answer. New accounts get 40 free credits (20 answers). Listening and transcribing the interviewer is always free — you only spend credits when an answer is generated. A typical 30-minute interview uses around 10–20 answers.",
+    a: "One credit is one AI answer. New accounts get 40 free credits. Listening and transcribing the interviewer is always free — you only spend credits when an answer is generated. A typical 30-minute interview uses around 10–20 answers.",
   },
   {
     q: "Can the interviewer see Ai.Intvra?",
@@ -79,7 +79,7 @@ const faqs = [
   },
   {
     q: "How do I sign up and pay?",
-    a: "Download the app and create your account — you can sign in with Google or email. You start with 20 free answers. When you need more, click Upgrade in the app (or choose a plan on this page) and pay in your browser. M-Pesa, card and Apple Pay are handled through Paystack; crypto (USDT/USDC on BNB Smart Chain, USDC on Ethereum, or Litecoin) is also available. Your plan is linked to your account email, so it's ready as soon as you sign in.",
+    a: "Download the app and create your account — you can sign in with Google or email. You start with 40 free credits. When you need more, click Upgrade in the app (or choose a plan on this page) and pay in your browser. M-Pesa, card and Apple Pay are handled through Paystack; crypto (USDT/USDC on BNB Smart Chain, USDC on Ethereum, or Litecoin) is also available. Your plan is linked to your account email, so it's ready as soon as you sign in.",
   },
   {
     q: "Can I pay with M-Pesa?",
@@ -148,7 +148,7 @@ export default async function Home() {
                 </a>
               </div>
               <p className="mt-6 text-sm text-muted">
-                <span className="text-text">20 free answers</span> on sign-up · No card required
+                <span className="text-text">40 free credits</span> on sign-up · No card required
               </p>
             </div>
 
@@ -275,7 +275,7 @@ export default async function Home() {
                 Walk into your next interview <span className="text-gradient">ready</span>.
               </h2>
               <p className="mt-4 max-w-xl text-muted">
-                Download Ai.Intvra free and get 20 answers to try it on a real call.
+                Download Ai.Intvra free and get 40 free credits to try it on a real call.
               </p>
               <div className="mt-8">
                 <DownloadButton release={release} />

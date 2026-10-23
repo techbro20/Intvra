@@ -33,7 +33,7 @@ function LoginScreen({ loginPending, error }: { loginPending: boolean; error?: s
         <img src={logoUrl} alt="" className="mx-auto h-16 w-16 rounded-2xl" draggable={false} />
         <h1 className="mt-5 text-xl font-semibold">Welcome to Ai.Intvra</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Sign in or create an account to start. New accounts get 40 free credits, enough for 20 answers (one free trial per computer).
+          Sign in or create an account to start. New accounts get 40 free credits (one free trial per computer).
         </p>
 
         {message ? (
