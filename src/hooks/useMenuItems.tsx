@@ -13,8 +13,10 @@ import {
   MonitorIcon,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAuth } from "@/hooks/useAuth";
 
 export const useMenuItems = () => {
+  const auth = useAuth();
   const menu: {
     icon: React.ElementType;
     label: string;
@@ -66,13 +68,16 @@ export const useMenuItems = () => {
       label: "Shortcuts",
       href: "/shortcuts",
     },
+  ];
 
-    {
+  // Lifetime and admin accounts bring their own keys. Credit plans use Ai.Intvra Cloud.
+  if (auth?.user?.byok) {
+    menu.push({
       icon: Code,
       label: "Providers",
       href: "/dev-space",
-    },
-  ];
+    });
+  }
 
   const footerItems = [
     {
