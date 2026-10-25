@@ -449,7 +449,7 @@ admin.get("/activity", (c) => {
     .all();
   const failures = db
     .prepare(
-      `SELECT e.kind, e.model, e.status, e.created_at, u.email, u.id AS user_id FROM usage_events e JOIN users u ON u.id = e.user_id
+      `SELECT e.kind, e.model, e.status, e.detail, e.created_at, u.email, u.id AS user_id FROM usage_events e JOIN users u ON u.id = e.user_id
        WHERE e.status != 'ok' ORDER BY e.id DESC LIMIT 30`
     )
     .all();
@@ -483,7 +483,7 @@ admin.get("/activity", (c) => {
         ${
           failures.length
             ? failures
-                .map((f) => `<tr><td><a href="/admin/users/${h(f.user_id)}">${h(f.email)}</a></td><td class="small">${h(f.kind)}${f.model ? ` · ${h(f.model)}` : ""} <span class="muted">(${h(f.status)})</span></td><td class="small muted">${fmtDate(f.created_at)}</td></tr>`)
+                .map((f) => `<tr><td><a href="/admin/users/${h(f.user_id)}">${h(f.email)}</a></td><td class="small">${h(f.kind)}${f.model ? ` · ${h(f.model)}` : ""} <span class="muted">(${h(f.status)})</span>${f.detail ? `<div class="muted">${h(f.detail)}</div>` : ""}</td><td class="small muted">${fmtDate(f.created_at)}</td></tr>`)
                 .join("")
             : emptyRow(3, "None.")
         }

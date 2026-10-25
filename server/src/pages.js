@@ -49,7 +49,7 @@ export function loginPage({ requestId, error = "", email = "" }) {
   return layout(
     "Sign in",
     `<h1>Sign in or create your account</h1>
-     <p>New accounts start with ${config.freeCredits} free credits.</p>
+     <p>New accounts get ${config.freeCredits} free credits the first time they sign in to the app.</p>
      ${error ? `<div class="error">${escapeHtml(error)}</div>` : ""}
      ${google}
      <form method="post" action="/auth/email/start">
@@ -58,8 +58,8 @@ export function loginPage({ requestId, error = "", email = "" }) {
        <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com" value="${escapeHtml(email)}">
        <button class="btn btn-primary" type="submit">Continue with email</button>
      </form>
-     <div class="muted">By continuing you agree to our <a class="link" href="https://ai.intvra.com/terms" target="_blank" rel="noopener">Terms</a>
-       and <a class="link" href="https://ai.intvra.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</div>`
+     <div class="muted">By continuing you agree to our <a class="link" href="${config.siteUrl}/terms" target="_blank" rel="noopener">Terms</a>
+       and <a class="link" href="${config.siteUrl}/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</div>`
   );
 }
 

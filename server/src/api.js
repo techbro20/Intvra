@@ -1,7 +1,17 @@
 import { Hono } from "hono";
 import { answerCost, config } from "./config.js";
-import { sha256 } from "./crypto.js";
-import { adjustCredits, countUsageSince, db, getUserById, publicUser, recordUsage, spendCredit } from "./db.js";
+import { randomToken, sha256 } from "./crypto.js";
+import {
+  countUsageSince,
+  db,
+  expirePlans,
+  getUserById,
+  publicUser,
+  recordUsage,
+  refundSpend,
+  spendCredit,
+  totalCredits,
+} from "./db.js";
 import { sanitizeMessages, streamChat, transcribe, UpstreamError } from "./ai.js";
 import { createLimiter } from "./ratelimit.js";
 
@@ -18,7 +28,7 @@ const outOfCredits = (c, user) =>
     c,
     402,
     user.plan === "lifetime"
-      ? "Your Lifetime plan uses your own API key. Add it in Dev Space to keep answering."
+      ? "Your Lifetime plan uses your own API key. Add it on the Providers page to keep answering."
       : user.trial_denied_at && !user.trial_claimed_at
         ? user.trial_denied_reason === "network"
           ? "Too many free trials have been claimed from this network. Choose a plan to keep getting answers."
@@ -38,8 +48,12 @@ api.use("*", async (c, next) => {
   if (!session || session.expires_at < Date.now()) {
     return apiError(c, 401, "Your session has expired. Please sign in again.", { code: "unauthorized" });
   }
-  const user = getUserById(session.user_id);
+  let user = getUserById(session.user_id);
   if (!user || user.disabled) return apiError(c, 403, "This account is unavailable.", { code: "disabled" });
+  if (user.plan === "pro" && user.plan_renews_at && user.plan_renews_at < Date.now()) {
+    expirePlans(user.id);
+    user = getUserById(user.id);
+  }
 
   const now = Date.now();
   if (now - session.last_used_at > 5 * 60 * 1000) {
@@ -59,6 +73,21 @@ api.post("/logout", (c) => {
   return c.json({ ok: true });
 });
 
+// One-time link that opens the checkout page in the browser already signed in.
+api.post("/billing/link", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const code = randomToken(32);
+  db.prepare("INSERT INTO web_links (code_hash, user_id, expires_at) VALUES (?, ?, ?)").run(
+    sha256(code),
+    c.get("user").id,
+    Date.now() + 2 * 60 * 1000
+  );
+  const url = new URL(`${config.publicUrl}/pay/open`);
+  url.searchParams.set("code", code);
+  if (typeof body.plan === "string" && /^[a-z]{2,12}$/.test(body.plan)) url.searchParams.set("plan", body.plan);
+  return c.json({ url: url.toString() });
+});
+
 // OpenAI-compatible streaming endpoint. Free-plan answers cost more so the trial stays small.
 api.post("/chat/completions", async (c) => {
   const user = c.get("user");
@@ -69,7 +98,7 @@ api.post("/chat/completions", async (c) => {
   if (answerLimiter(user.id)) {
     return apiError(c, 429, "You're sending requests too quickly. Please wait a moment.");
   }
-  if (user.credits < cost) return outOfCredits(c, user);
+  if (totalCredits(user) < cost) return outOfCredits(c, user);
 
   let body;
   let sanitized;
@@ -80,8 +109,8 @@ api.post("/chat/completions", async (c) => {
     return apiError(c, error instanceof UpstreamError ? error.status : 400, error.message || "Invalid request.");
   }
 
-  const balance = spendCredit(user.id, "answer", null, cost);
-  if (balance === null) return outOfCredits(c, user);
+  const spend = spendCredit(user.id, "answer", null, cost);
+  if (!spend) return outOfCredits(c, user);
 
   try {
     const { response, model } = await streamChat({
@@ -96,14 +125,15 @@ api.post("/chat/completions", async (c) => {
       headers: {
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
-        "X-Credits-Remaining": String(balance),
+        "X-Credits-Remaining": String(spend.balance),
         "X-Accel-Buffering": "no",
       },
     });
   } catch (error) {
-    adjustCredits(user.id, cost, "refund_failed_answer");
-    recordUsage(user.id, "answer", null, "failed");
-    if (c.req.raw.signal.aborted) return new Response(null, { status: 499 });
+    refundSpend(user.id, spend, "refund_failed_answer");
+    // A newer question cancels the one already in flight. That is not a provider failure.
+    if (c.req.raw.signal.aborted || error?.name === "AbortError") return new Response(null, { status: 499 });
+    recordUsage(user.id, "answer", error.model, "failed", error.detail || error.message);
     return apiError(c, error instanceof UpstreamError ? error.status : 503, error.message || "The AI service failed.");
   }
 });
@@ -114,7 +144,7 @@ api.post("/audio/transcriptions", async (c) => {
   if (Number(c.req.header("content-length") || 0) > MAX_AUDIO_BYTES) {
     return apiError(c, 413, "Audio clip is too large.");
   }
-  if (user.credits < answerCost(user)) return outOfCredits(c, user);
+  if (totalCredits(user) < answerCost(user)) return outOfCredits(c, user);
   if (sttLimiter(user.id)) return apiError(c, 429, "Too many transcription requests. Please wait a moment.");
   const dailyLimit = user.plan === "free" ? config.stt.freeDailyLimit : config.stt.dailyLimit;
   if (countUsageSince(user.id, "stt", Date.now() - 86_400_000) >= dailyLimit) {
@@ -130,7 +160,7 @@ api.post("/audio/transcriptions", async (c) => {
     recordUsage(user.id, "stt", config.stt.model, "ok");
     return c.json({ text });
   } catch (error) {
-    recordUsage(user.id, "stt", config.stt.model, "failed");
+    recordUsage(user.id, "stt", config.stt.model, "failed", error.detail || error.message);
     return apiError(c, error instanceof UpstreamError ? error.status : 503, error.message || "Transcription failed.");
   }
 });

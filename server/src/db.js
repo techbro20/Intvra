@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { answerCost, config } from "./config.js";
 import { sha256 } from "./crypto.js";
+import { PAID_PLANS } from "./plans.js";
 
 fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
 
@@ -93,6 +94,39 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_trial_networks ON trial_networks(network_hash, created_at);
+
+  CREATE TABLE IF NOT EXISTS payments (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan TEXT NOT NULL,
+    method TEXT NOT NULL,
+    provider_ref TEXT,
+    amount TEXT NOT NULL,
+    currency TEXT NOT NULL,
+    status TEXT NOT NULL,
+    detail TEXT,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER,
+    paid_at INTEGER
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_ref ON payments(provider_ref) WHERE provider_ref IS NOT NULL;
+  CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS web_links (
+    code_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS admin_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_email TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target TEXT,
+    detail TEXT,
+    created_at INTEGER NOT NULL
+  );
 `);
 
 const userColumns = db.prepare("PRAGMA table_info(users)").all().map((column) => column.name);
@@ -108,6 +142,17 @@ if (!userColumns.includes("trial_denied_reason")) {
   db.exec("ALTER TABLE users ADD COLUMN trial_denied_reason TEXT");
   db.exec("UPDATE users SET trial_denied_reason = 'device' WHERE trial_denied_at IS NOT NULL");
 }
+// Pro's monthly allowance is kept apart from bought/bonus credits so it can reset each period.
+if (!userColumns.includes("plan_credits")) {
+  db.exec("ALTER TABLE users ADD COLUMN plan_credits INTEGER NOT NULL DEFAULT 0");
+}
+
+const usageColumns = db.prepare("PRAGMA table_info(usage_events)").all().map((column) => column.name);
+if (!usageColumns.includes("detail")) {
+  db.exec("ALTER TABLE usage_events ADD COLUMN detail TEXT");
+}
+
+export const totalCredits = (user) => user.credits + (user.plan_credits || 0);
 
 export const PLANS = ["free", "payg", "pro", "lifetime"];
 
@@ -210,35 +255,60 @@ export function claimTrial(userId, deviceId, networkKey = null) {
   });
 }
 
-/** Takes one credit if available. Returns the new balance, or null if the user has none left. */
+/**
+ * Takes `amount` credits, plan allowance first. Returns { balance, fromPlan, fromCredits },
+ * or null if the user doesn't have enough.
+ */
 export function spendCredit(userId, reason, ref = null, amount = 1) {
   return transaction(() => {
-    const row = db
-      .prepare("UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ? RETURNING credits")
-      .get(amount, userId, amount);
-    if (!row) return null;
-    insertLedger(userId, -amount, row.credits, reason, ref);
-    return row.credits;
+    const user = getUserById(userId);
+    if (!user || totalCredits(user) < amount) return null;
+    const fromPlan = Math.min(user.plan_credits || 0, amount);
+    const fromCredits = amount - fromPlan;
+    db.prepare("UPDATE users SET plan_credits = plan_credits - ?, credits = credits - ? WHERE id = ?").run(
+      fromPlan,
+      fromCredits,
+      userId
+    );
+    const balance = totalCredits(user) - amount;
+    insertLedger(userId, -amount, balance, reason, ref);
+    return { balance, fromPlan, fromCredits };
+  });
+}
+
+/** Returns credits taken by spendCredit to the balances they came from. */
+export function refundSpend(userId, spend, reason) {
+  return transaction(() => {
+    db.prepare("UPDATE users SET plan_credits = plan_credits + ?, credits = credits + ? WHERE id = ?").run(
+      spend.fromPlan,
+      spend.fromCredits,
+      userId
+    );
+    const balance = totalCredits(getUserById(userId));
+    insertLedger(userId, spend.fromPlan + spend.fromCredits, balance, reason);
+    return balance;
   });
 }
 
 export function adjustCredits(userId, delta, reason, ref = null) {
   return transaction(() => {
     const row = db
-      .prepare("UPDATE users SET credits = MAX(0, credits + ?) WHERE id = ? RETURNING credits")
+      .prepare("UPDATE users SET credits = MAX(0, credits + ?) WHERE id = ? RETURNING credits, plan_credits")
       .get(delta, userId);
     if (!row) throw new Error("User not found");
-    insertLedger(userId, delta, row.credits, reason, ref);
-    return row.credits;
+    const balance = row.credits + row.plan_credits;
+    insertLedger(userId, delta, balance, reason, ref);
+    return balance;
   });
 }
 
-export function recordUsage(userId, kind, model, status) {
-  db.prepare("INSERT INTO usage_events (user_id, kind, model, status, created_at) VALUES (?, ?, ?, ?, ?)").run(
+export function recordUsage(userId, kind, model, status, detail = null) {
+  db.prepare("INSERT INTO usage_events (user_id, kind, model, status, detail, created_at) VALUES (?, ?, ?, ?, ?, ?)").run(
     userId,
     kind,
     model || null,
     status,
+    detail ? String(detail).slice(0, 300) : null,
     Date.now()
   );
 }
@@ -256,7 +326,7 @@ export function publicUser(user) {
     email: user.email,
     name: user.name,
     plan: user.plan,
-    credits: user.credits,
+    credits: totalCredits(user),
     creditsPerAnswer: answerCost(user),
     planRenewsAt: user.plan_renews_at,
     isAdmin,
@@ -268,9 +338,56 @@ export function publicUser(user) {
   };
 }
 
+/** Starts the next Pro period, adds bought credits or switches to Lifetime. Call inside a transaction. */
+export function applyPlanPurchase(userId, plan, paymentId) {
+  const user = getUserById(userId);
+  const now = Date.now();
+  const before = totalCredits(user);
+
+  if (plan === "payg") {
+    db.prepare(
+      "UPDATE users SET credits = credits + ?, plan = CASE WHEN plan = 'free' THEN 'payg' ELSE plan END WHERE id = ?"
+    ).run(PAID_PLANS.payg.credits, userId);
+  } else if (plan === "pro") {
+    const periodStart = user.plan === "pro" && user.plan_renews_at > now ? user.plan_renews_at : now;
+    db.prepare("UPDATE users SET plan = 'pro', plan_credits = ?, plan_renews_at = ? WHERE id = ?").run(
+      PAID_PLANS.pro.credits,
+      periodStart + PAID_PLANS.pro.days * 86_400_000,
+      userId
+    );
+  } else if (plan === "lifetime") {
+    db.prepare("UPDATE users SET plan = 'lifetime', plan_credits = 0, plan_renews_at = NULL WHERE id = ?").run(userId);
+  } else {
+    throw new Error(`Unknown plan ${plan}`);
+  }
+
+  const after = totalCredits(getUserById(userId));
+  insertLedger(userId, after - before, after, `purchase_${plan}`, paymentId);
+}
+
+/** Ends Pro periods that have run out. Remaining bought credits stay; the monthly allowance goes. */
+export function expirePlans(userId = null) {
+  const now = Date.now();
+  const due = db
+    .prepare(
+      `SELECT * FROM users WHERE plan = 'pro' AND plan_renews_at IS NOT NULL AND plan_renews_at < ?${userId ? " AND id = ?" : ""}`
+    )
+    .all(...(userId ? [now, userId] : [now]));
+  for (const user of due) {
+    transaction(() => {
+      db.prepare("UPDATE users SET plan = 'payg', plan_credits = 0, plan_renews_at = NULL WHERE id = ?").run(user.id);
+      if (user.plan_credits) insertLedger(user.id, -user.plan_credits, user.credits, "pro_period_ended");
+    });
+  }
+  return due.length;
+}
+
 // Drop stale login attempts and expired sessions once an hour.
 setInterval(() => {
   const now = Date.now();
   db.prepare("DELETE FROM login_requests WHERE expires_at < ?").run(now - 24 * 60 * 60 * 1000);
   db.prepare("DELETE FROM sessions WHERE expires_at < ?").run(now);
+  db.prepare("DELETE FROM web_links WHERE expires_at < ?").run(now - 24 * 60 * 60 * 1000);
+  db.prepare("UPDATE payments SET status = 'expired' WHERE status = 'pending' AND expires_at < ?").run(now);
+  expirePlans();
 }, 60 * 60 * 1000).unref();

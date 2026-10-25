@@ -4,6 +4,7 @@ import { randomToken, safeEqual, sha256, sha256Base64Url, sixDigitCode } from ".
 import { claimTrial, db, getUserById, publicUser, upsertUser } from "./db.js";
 import { isDisposableEmail } from "./disposable.js";
 import { networkKey } from "./network.js";
+import { safeNextPath, startWebSession } from "./websession.js";
 import { codePage, loginPage, messagePage } from "./pages.js";
 import { createLimiter } from "./ratelimit.js";
 
@@ -12,6 +13,7 @@ const LOGIN_CODE_TTL_MS = 5 * 60 * 1000;
 const EMAIL_CODE_TTL_MS = 10 * 60 * 1000;
 const MAX_CODE_ATTEMPTS = 5;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const WEB_REDIRECT = "web";
 
 const emailSendLimiter = createLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
 const ipLimiter = createLimiter({ windowMs: 15 * 60 * 1000, max: 40 });
@@ -45,6 +47,17 @@ function getOpenLoginRequest(id) {
 function completeLogin(c, request, user) {
   if (user.disabled) {
     return c.html(messagePage("Account disabled", "This account has been disabled. Contact support for help."), 403);
+  }
+  if (request.redirect_uri === WEB_REDIRECT) {
+    const now = Date.now();
+    db.prepare("UPDATE login_requests SET user_id = ?, completed_at = ?, used_at = ? WHERE id = ? AND completed_at IS NULL").run(
+      user.id,
+      now,
+      now,
+      request.id
+    );
+    startWebSession(c, user.id);
+    return c.redirect(safeNextPath(request.app_state), 302);
   }
   const loginCode = randomToken(32);
   db.prepare(
@@ -103,6 +116,19 @@ auth.get("/login", (c) => {
   db.prepare(
     "INSERT INTO login_requests (id, code_challenge, redirect_uri, app_state, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(id, challenge, redirectUri, appState, now, now + LOGIN_REQUEST_TTL_MS);
+  return c.redirect(`/auth/login/${id}`, 302);
+});
+
+// Browser-only sign-in for the checkout page (people buying from the website).
+auth.get("/web", (c) => {
+  if (ipLimiter(`login:${clientIp(c)}`)) {
+    return c.html(messagePage("Too many attempts", "Please wait a few minutes and try again."), 429);
+  }
+  const id = randomToken(18);
+  const now = Date.now();
+  db.prepare(
+    "INSERT INTO login_requests (id, code_challenge, redirect_uri, app_state, created_at, expires_at) VALUES (?, 'web', ?, ?, ?, ?)"
+  ).run(id, WEB_REDIRECT, safeNextPath(c.req.query("next")), now, now + LOGIN_REQUEST_TTL_MS);
   return c.redirect(`/auth/login/${id}`, 302);
 });
 
