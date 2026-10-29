@@ -33,7 +33,11 @@ export default function PrivacyPage() {
         provider; we never see or store your card details.
       </p>
       <h2>Analytics</h2>
-      <p>The website may use privacy-friendly, cookie-less analytics to count visits. We do not sell your data.</p>
+      <p>
+        The website uses Google Analytics to understand how visitors use the site. Google Analytics sets cookies and
+        collects usage data such as pages visited and approximate location, subject to Google&apos;s privacy policy. We
+        do not sell your data.
+      </p>
       <h2>Contact and deletion</h2>
       <p>
         To ask about your data or request deletion, use the{" "}
